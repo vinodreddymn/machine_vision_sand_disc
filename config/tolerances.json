@@ -1,0 +1,26 @@
+{
+  "expected_hole_count": 8,
+  "outer_radius_px": {
+    "min": 100,
+    "max": 420
+  },
+  "hole_diameter_px": {
+    "min": 12,
+    "max": 70
+  },
+  "hole_circularity_min": 0.78,
+  "hole_position": {
+    "radial_tolerance_ratio": 0.18,
+    "angular_spacing_tolerance_deg": 18.0,
+    "max_pattern_circle_residual_ratio": 0.035,
+    "min_pattern_ellipse_axis_ratio": 0.92
+  },
+  "outer_edge": {
+    "circularity_min": 0.88,
+    "max_area_loss_ratio": 0.08
+  },
+  "surface": {
+    "min_defect_area_px": 80,
+    "max_total_defect_area_ratio": 0.01
+  }
+}

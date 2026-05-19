@@ -1,0 +1,47 @@
+"""Central project paths and tolerance loading helpers."""
+
+from __future__ import annotations
+
+import json
+import os
+from pathlib import Path
+from typing import Any
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+CONFIG_DIR = PROJECT_ROOT / "config"
+OUTPUT_DIR = PROJECT_ROOT / "outputs"
+LOG_DIR = OUTPUT_DIR / "logs"
+STORAGE_DIR = PROJECT_ROOT / "storage"
+STORAGE_ENV_FILE = STORAGE_DIR / ".env"
+TOLERANCES_FILE = CONFIG_DIR / "tolerances.json"
+KIOSK_MODE = True  # Set to True to enable kiosk mode (full-screen, no cursor)
+
+
+def _load_env_file(path: Path) -> dict[str, str]:
+    """Read simple KEY=VALUE lines from one local env file."""
+    if not path.exists():
+        return {}
+    values: dict[str, str] = {}
+    for raw_line in path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        values[key.strip()] = value.strip()
+    return values
+
+
+_storage_env = _load_env_file(STORAGE_ENV_FILE)
+POSTGRES_DSN = os.getenv("DISK_VISION_POSTGRES_DSN") or (
+    f"dbname={_storage_env.get('POSTGRES_DB', 'diskvision')} "
+    f"user={_storage_env.get('POSTGRES_USER', 'postgres')} "
+    f"password={_storage_env.get('POSTGRES_PASSWORD', '')} "
+    f"host={_storage_env.get('POSTGRES_HOST', 'localhost')} "
+    f"port={_storage_env.get('POSTGRES_PORT', '5432')}"
+)
+
+
+def load_tolerances() -> dict[str, Any]:
+    """Load inspection tolerances from JSON for easy shop-floor tuning."""
+    with TOLERANCES_FILE.open("r", encoding="utf-8") as file:
+        return json.load(file)

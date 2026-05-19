@@ -1,0 +1,39 @@
+.venv/
+__pycache__/
+.pytest_cache/
+outputs/passed/*
+outputs/failed/*
+outputs/logs/*
+!outputs/passed/.gitkeep
+!outputs/failed/.gitkeep
+!outputs/logs/.gitkeep
+storage/.env
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual Environment
+.venv/
+venv/
+env/
+
+# VS Code
+.vscode/
+
+# Generated Videos
+*.mp4
+*.avi
+
+# Images
+*.png
+*.jpg
+*.jpeg
+
+# Logs
+*.log
+
+# OS Files
+Thumbs.db
+.DS_Store

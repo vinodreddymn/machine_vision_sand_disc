@@ -1,0 +1,6 @@
+{
+  "description": "Reference pattern used by the first classical inspection phase.",
+  "expected_hole_count": 8,
+  "normalized_hole_radius": 0.58,
+  "hole_angles_deg": [0, 45, 90, 135, 180, 225, 270, 315]
+}
