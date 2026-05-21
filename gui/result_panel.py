@@ -24,11 +24,15 @@ class ResultPanel(QWidget):
         self.defects_label.setObjectName("panelHeading")
         self.defect_list = QListWidget()
         self.defect_list.setSelectionMode(QAbstractItemView.NoSelection)
+        self.metrics_label = QLabel()
+        self.metrics_label.setObjectName("mutedText")
+        self.metrics_label.setWordWrap(True)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(10)
         layout.addWidget(self.status_label)
+        layout.addWidget(self.metrics_label)
         if compact:
             self.defect_list.setMaximumHeight(90)
         layout.addWidget(self.defects_label)
@@ -41,6 +45,7 @@ class ResultPanel(QWidget):
         self.style().unpolish(self.status_label)
         self.style().polish(self.status_label)
         self.defect_list.clear()
+        self.metrics_label.setText("")
 
     def show_result(self, result: InspectionResult) -> None:
         """Populate the panel from a completed inspection."""
@@ -48,6 +53,15 @@ class ResultPanel(QWidget):
         self.status_label.setProperty("inspectionState", "pass" if result.passed else "fail")
         self.style().unpolish(self.status_label)
         self.style().polish(self.status_label)
+
+        metrics = result.measurements
+        metrics_text = (
+            f"Outer R: {metrics.get('outer_radius_px', '-')}, "
+            f"Holes: {metrics.get('hole_count', '-')}, "
+            f"Dsp: {metrics.get('hole_diameter_spread_ratio', '-')}, "
+            f"Surface: {metrics.get('surface_defect_count', '-')}"
+        )
+        self.metrics_label.setText(metrics_text)
 
         self.defect_list.clear()
         if result.defects:

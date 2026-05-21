@@ -22,7 +22,7 @@ def build_synthetic_disk(
     center = (300, 300)
     cv2.circle(image, center, 220, (190, 190, 190), -1)
     expected_holes = load_tolerances()["expected_hole_count"]
-    for angle in np.linspace(0, 360, expected_holes, endpoint=False):
+    for idx, angle in enumerate(np.linspace(0, 360, expected_holes, endpoint=False)):
         radians = np.radians(angle)
         radius_x = 150 if oval_pattern else 130
         radius_y = 105 if oval_pattern else 130
@@ -30,9 +30,9 @@ def build_synthetic_disk(
             round(center[0] + radius_x * np.cos(radians)),
             round(center[1] - radius_y * np.sin(radians)),
         )
-        radius = 26 if multi_diameter_hole and angle == 72 else 18
+        radius = 26 if multi_diameter_hole and idx == 1 else 18
         cv2.circle(image, hole_center, radius, (0, 0, 0), -1)
-        if irregular_hole and angle == 0:
+        if irregular_hole and idx == 0:
             cv2.rectangle(image, (hole_center[0] + 10, hole_center[1] - 5), (hole_center[0] + 27, hole_center[1] + 5), (0, 0, 0), -1)
     if with_surface_defect:
         cv2.rectangle(image, (280, 210), (330, 250), (70, 70, 70), -1)
@@ -45,6 +45,20 @@ def test_nominal_disk_passes() -> None:
     result = inspect_disk(build_synthetic_disk())
     assert result.passed is True
     assert result.measurements["hole_count"] == load_tolerances()["expected_hole_count"]
+
+
+def test_outer_diameter_out_of_tolerance_fails_before_hole_or_surface_checks() -> None:
+    image = np.zeros((600, 600, 3), dtype=np.uint8)
+    center = (300, 300)
+    cv2.circle(image, center, 60, (190, 190, 190), -1)
+    result = inspect_disk(image)
+
+    assert result.passed is False
+    assert result.measurements["outer_radius_px"] < load_tolerances()["outer_radius_px"]["min"]
+    assert result.measurements["outer_diameter_px"] == result.measurements["outer_radius_px"] * 2
+    assert result.measurements["hole_count"] == 0
+    assert result.measurements["surface_defect_count"] == 0
+    assert "Outer radius is outside configured tolerance." in result.defects
 
 
 def test_surface_defect_fails_and_overlay_renders() -> None:
@@ -99,3 +113,21 @@ def test_crack_like_surface_defect_fails() -> None:
     assert result.passed is False
     assert any(defect.severity == "crack" for defect in result.surface_defects)
     assert "Crack-like surface defect detected." in result.defects
+
+
+def test_low_contrast_disk_still_detects() -> None:
+    image = np.full((600, 600, 3), 60, dtype=np.uint8)
+    center = (300, 300)
+    cv2.circle(image, center, 220, (120, 120, 120), -1)
+    expected_holes = load_tolerances()["expected_hole_count"]
+    for angle in np.linspace(0, 360, expected_holes, endpoint=False):
+        radians = np.radians(angle)
+        hole_center = (
+            round(center[0] + 130 * np.cos(radians)),
+            round(center[1] - 130 * np.sin(radians)),
+        )
+        cv2.circle(image, hole_center, 18, (10, 10, 10), -1)
+
+    result = inspect_disk(image)
+    assert result.passed is True
+    assert result.measurements["hole_count"] == expected_holes

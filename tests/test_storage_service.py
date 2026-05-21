@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from automation.workflow import FinalDisposition, StationDecision, StationRecord
+from config.settings import load_tolerances
 from storage.service import InspectionStorageService
 from tests.test_pipeline import build_synthetic_disk
 from vision.defect_analysis import inspect_disk
@@ -69,7 +70,7 @@ def test_storage_service_assigns_stage_serial_and_persists_payload() -> None:
     assert record.serial_number == serial
     assert record.inspected_at == inspected_at
     assert repository.saved[0]["physical_part_id"] == "PART001"
-    assert repository.saved[0]["measurements"]["hole_count"] == 5
+    assert repository.saved[0]["measurements"]["hole_count"] == load_tolerances()["expected_hole_count"]
 
 
 def test_storage_service_serials_increment_per_stage_per_day() -> None:

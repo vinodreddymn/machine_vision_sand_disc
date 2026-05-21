@@ -44,7 +44,7 @@ class InspectionStorageService:
     def persist_station_record(
         self,
         *,
-        physical_part_id: str,
+        physical_part_id: str | None,
         stage: str,
         record: StationRecord,
         final_disposition: FinalDisposition,
@@ -55,6 +55,8 @@ class InspectionStorageService:
         if record.inspection_result is None:
             raise ValueError("Only completed station inspections can be persisted.")
         inspected_at = inspected_at or datetime.now().astimezone()
+        if physical_part_id is None:
+            physical_part_id = f"{stage}-{inspected_at:%Y%m%d-%H%M%S}"
         serial_number = self.repository.next_serial(stage, inspected_at)
         self.repository.save_inspection(
             physical_part_id=physical_part_id,

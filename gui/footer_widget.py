@@ -11,14 +11,17 @@ class FooterWidget(QWidget):
     def __init__(self) -> None:
         super().__init__()
         self.setObjectName("footerWidget")
-        self.part_value = QLabel()
+        self.part_value_s1 = QLabel()
+        self.part_value_s2 = QLabel()
+        self.part_value = self.part_value_s1
         self.storage_value = QLabel()
         self.mode_value = QLabel()
         self._build_layout()
 
-    def set_values(self, *, part_id: str, storage_status: str, mode: str) -> None:
+    def set_values(self, *, part_id_s1: str, part_id_s2: str, storage_status: str, mode: str) -> None:
         """Refresh the footer summary values."""
-        self.part_value.setText(part_id)
+        self.part_value_s1.setText(part_id_s1)
+        self.part_value_s2.setText(part_id_s2)
         self.storage_value.setText(storage_status)
         self.mode_value.setText(mode)
 
@@ -26,7 +29,8 @@ class FooterWidget(QWidget):
         layout = QHBoxLayout(self)
         layout.setContentsMargins(16, 8, 16, 8)
         layout.setSpacing(18)
-        layout.addWidget(self._group("CURRENT PART", self.part_value))
+        layout.addWidget(self._group("S1 PART ID", self.part_value_s1))
+        layout.addWidget(self._group("S2 PART ID", self.part_value_s2))
         layout.addWidget(self._group("STORAGE", self.storage_value))
         layout.addWidget(self._group("OPERATING MODE", self.mode_value))
         layout.addStretch()

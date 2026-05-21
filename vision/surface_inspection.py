@@ -36,17 +36,19 @@ def detect_surface_defects(
     if valid_pixels.size == 0:
         return []
     nominal_intensity = float(np.median(valid_pixels))
-    threshold_value = max(0, round(nominal_intensity - 35))
+    # Use a slightly less aggressive global dark threshold to catch moderate defects
+    threshold_value = max(0, round(nominal_intensity - 12))
     _, dark_anomalies = cv2.threshold(gray, threshold_value, 255, cv2.THRESH_BINARY_INV)
 
-    local_background = cv2.morphologyEx(gray, cv2.MORPH_CLOSE, np.ones((17, 17), np.uint8))
+    # Use smaller structuring element for local background to preserve medium-sized defects
+    local_background = cv2.morphologyEx(gray, cv2.MORPH_CLOSE, np.ones((11, 11), np.uint8))
     blackhat = cv2.subtract(local_background, gray)
-    _, thin_anomalies = cv2.threshold(blackhat, 18, 255, cv2.THRESH_BINARY)
+    _, thin_anomalies = cv2.threshold(blackhat, 8, 255, cv2.THRESH_BINARY)
 
     anomalies = cv2.bitwise_or(dark_anomalies, thin_anomalies)
     anomalies = cv2.bitwise_and(anomalies, inspection_mask)
     anomalies = cv2.morphologyEx(anomalies, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
-    anomalies = cv2.morphologyEx(anomalies, cv2.MORPH_CLOSE, np.ones((5, 5), np.uint8))
+    anomalies = cv2.morphologyEx(anomalies, cv2.MORPH_CLOSE, np.ones((11, 11), np.uint8))
 
     contours, _ = cv2.findContours(anomalies, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     defects: list[SurfaceDefect] = []

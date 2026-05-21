@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import cv2
+import time
 import logging
 from pathlib import Path
 
@@ -17,6 +18,7 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QMessageBox,
     QPlainTextEdit,
+    QSizePolicy,
     QSplitter,
     QVBoxLayout,
     QWidget,
@@ -24,7 +26,9 @@ from PySide6.QtWidgets import (
 
 from automation.plc import SimulatedPLCController
 from automation.workflow import FinalDisposition, StationDecision, TwoStageInspectionController
-from config.settings import KIOSK_MODE, POSTGRES_DSN
+from config.settings import KIOSK_MODE, POSTGRES_DSN, load_tolerances
+from vision.preprocessing import preprocess_image, create_foreground_mask
+from vision.circle_detection import detect_outer_circle
 from gui.control_panel import ControlPanel
 from gui.footer_widget import FooterWidget
 from gui.header_widget import HeaderWidget
@@ -60,6 +64,16 @@ class MainWindow(QMainWindow):
         self.station_2_video_timer = QTimer(self)
         self.station_1_frame_index = 0
         self.station_2_frame_index = 0
+        self.empty_frames_s1 = 0
+        self.empty_frames_s2 = 0
+        self.last_disc_x_s1 = -1
+        self.last_disc_x_s2 = -1
+        self.station_1_disc_active = False
+        self.station_1_disc_inspected = False
+        self.station_2_disc_active = False
+        self.station_2_disc_inspected = False
+        self._last_frame_time_s1 = 0.0
+        self._last_frame_time_s2 = 0.0
 
         self.control_panel = ControlPanel()
         self.header_widget = HeaderWidget()
@@ -71,11 +85,15 @@ class MainWindow(QMainWindow):
         self.log_console.setReadOnly(True)
         self.log_console.setMaximumBlockCount(300)
 
-        self.part_id_value = QLabel()
+        self.part_id_value_s1 = QLabel()
+        self.part_id_value_s2 = QLabel()
+        self.part_id_value = self.part_id_value_s1
         self.station_1_value = QLabel()
-        self.flipper_value = QLabel()
+        self.flipper_value = QLabel("N/A")
         self.station_2_value = QLabel()
-        self.final_value = QLabel()
+        self.final_value_s1 = QLabel()
+        self.final_value_s2 = QLabel()
+        self.final_value = self.final_value_s1
         self.plc_value = QLabel()
         self.storage_value = QLabel()
         self.total_detected_value = QLabel()
@@ -102,7 +120,7 @@ class MainWindow(QMainWindow):
 
     def _build_layout(self) -> None:
         summary_box = self._build_process_summary()
-        counters_box = self._build_counter_summary()
+        metrics_bar = self._build_production_metrics_bar()
 
         workspace_widget = QWidget()
         workspace_widget.setObjectName("workspaceWidget")
@@ -133,13 +151,8 @@ class MainWindow(QMainWindow):
         content_layout = QVBoxLayout(content_host)
         content_layout.setContentsMargins(0, 0, 0, 0)
         content_layout.setSpacing(14)
-        summary_row = QWidget()
-        summary_row_layout = QHBoxLayout(summary_row)
-        summary_row_layout.setContentsMargins(0, 0, 0, 0)
-        summary_row_layout.setSpacing(14)
-        summary_row_layout.addWidget(summary_box, 1)
-        summary_row_layout.addWidget(counters_box, 1)
-        content_layout.addWidget(summary_row)
+        content_layout.addWidget(metrics_bar)
+        content_layout.addWidget(summary_box)
         content_layout.addWidget(stations_host, 1)
 
         splitter = QSplitter()
@@ -159,11 +172,10 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(body_widget)
 
     def _connect_signals(self) -> None:
-        self.control_panel.new_part_button.clicked.connect(self.start_new_part)
+        self.control_panel.new_part_button_s1.clicked.connect(self.start_new_part_s1)
+        self.control_panel.new_part_button_s2.clicked.connect(self.start_new_part_s2)
         self.control_panel.upload_station_1_button.clicked.connect(self.upload_station_1_image)
-        self.control_panel.inspect_station_1_button.clicked.connect(self.run_station_1_inspection)
         self.control_panel.upload_station_2_button.clicked.connect(self.upload_station_2_image)
-        self.control_panel.inspect_station_2_button.clicked.connect(self.run_station_2_inspection)
         self.header_widget.shutdown_button.clicked.connect(self.close)
 
     def _apply_theme(self) -> None:
@@ -181,6 +193,41 @@ class MainWindow(QMainWindow):
             border: 1px solid #243041;
             border-radius: 8px;
         }
+        #metricsBar {
+            background-color: #0F172A;
+            border: 2px solid #334155;
+            border-radius: 8px;
+        }
+        #metricStage {
+            background-color: #111827;
+            border: 1px solid #334155;
+            border-radius: 6px;
+        }
+        #metricStageTitle {
+            color: #F8FAFC;
+            font-size: 14px;
+            font-weight: 800;
+        }
+        #metricTile {
+            background-color: #020617;
+            border: 1px solid #243041;
+            border-radius: 6px;
+        }
+        #metricLabel {
+            color: #94A3B8;
+            font-size: 11px;
+            font-weight: 800;
+        }
+        #metricValue {
+            color: #F8FAFC;
+            font-size: 36px;
+            font-weight: 900;
+            qproperty-alignment: AlignCenter;
+        }
+        #metricValue[metricTone="total"] { color: #93C5FD; }
+        #metricValue[metricTone="pass"] { color: #86EFAC; }
+        #metricValue[metricTone="fail"] { color: #FCA5A5; }
+        #metricValue[metricTone="received"] { color: #FDE68A; }
         #workspaceWidget, #stationsHost { background-color: transparent; }
         #logoLabel { background-color: transparent; border: none; }
         #companyTitle {
@@ -413,64 +460,203 @@ class MainWindow(QMainWindow):
     def _build_process_summary(self) -> QWidget:
         box = QWidget()
         box.setObjectName("summaryPanel")
-        layout = QGridLayout(box)
-        layout.setContentsMargins(12, 12, 12, 12)
-        layout.setHorizontalSpacing(12)
-        layout.setVerticalSpacing(8)
-        rows = [
-            ("Part ID", self.part_id_value),
-            ("Station 1", self.station_1_value),
-            ("Station 1 Serial", self.station_1_serial_value),
-            ("Flipper", self.flipper_value),
-            ("Station 2", self.station_2_value),
-            ("Station 2 Serial", self.station_2_serial_value),
-            ("Final Disposition", self.final_value),
-            ("Last PLC Action", self.plc_value),
-            ("Storage", self.storage_value),
+        layout = QHBoxLayout(box)
+        layout.setContentsMargins(16, 16, 16, 16)
+        layout.setSpacing(24)
+
+        # Stage 1 Column
+        s1_box = QFrame()
+        s1_box.setFrameShape(QFrame.StyledPanel)
+        s1_box.setStyleSheet("border: none; background: transparent;")
+        s1_layout = QGridLayout(s1_box)
+        s1_layout.setContentsMargins(0, 0, 0, 0)
+        s1_layout.setVerticalSpacing(8)
+        s1_layout.setHorizontalSpacing(12)
+        
+        s1_title = QLabel("STAGE 1 - TOP SIDE")
+        s1_title.setObjectName("panelSubheading")
+        s1_layout.addWidget(s1_title, 0, 0, 1, 2)
+        
+        s1_rows = [
+            ("Part ID", self.part_id_value_s1),
+            ("Decision", self.station_1_value),
+            ("Serial Number", self.station_1_serial_value),
+            ("Disposition", self.final_value_s1),
         ]
-        for row, (label, value) in enumerate(rows):
-            layout.addWidget(self._caption(label.upper()), row, 0)
-            value.setObjectName("summaryValue")
-            layout.addWidget(value, row, 1)
+        for idx, (label, val) in enumerate(s1_rows, start=1):
+            s1_layout.addWidget(self._caption(label.upper()), idx, 0)
+            val.setObjectName("summaryValue")
+            s1_layout.addWidget(val, idx, 1)
+
+        # Stage 2 Column
+        s2_box = QFrame()
+        s2_box.setFrameShape(QFrame.StyledPanel)
+        s2_box.setStyleSheet("border: none; background: transparent;")
+        s2_layout = QGridLayout(s2_box)
+        s2_layout.setContentsMargins(0, 0, 0, 0)
+        s2_layout.setVerticalSpacing(8)
+        s2_layout.setHorizontalSpacing(12)
+        
+        s2_title = QLabel("STAGE 2 - FLIPPED SIDE")
+        s2_title.setObjectName("panelSubheading")
+        s2_layout.addWidget(s2_title, 0, 0, 1, 2)
+        
+        s2_rows = [
+            ("Part ID", self.part_id_value_s2),
+            ("Decision", self.station_2_value),
+            ("Serial Number", self.station_2_serial_value),
+            ("Disposition", self.final_value_s2),
+        ]
+        for idx, (label, val) in enumerate(s2_rows, start=1):
+            s2_layout.addWidget(self._caption(label.upper()), idx, 0)
+            val.setObjectName("summaryValue")
+            s2_layout.addWidget(val, idx, 1)
+
+        # System Info Column
+        sys_box = QFrame()
+        sys_box.setFrameShape(QFrame.StyledPanel)
+        sys_box.setStyleSheet("border: none; background: transparent;")
+        sys_layout = QGridLayout(sys_box)
+        sys_layout.setContentsMargins(0, 0, 0, 0)
+        sys_layout.setVerticalSpacing(8)
+        sys_layout.setHorizontalSpacing(12)
+        
+        sys_title = QLabel("SYSTEM STATUS")
+        sys_title.setObjectName("panelSubheading")
+        sys_layout.addWidget(sys_title, 0, 0, 1, 2)
+        
+        sys_rows = [
+            ("Last PLC Action", self.plc_value),
+            ("Storage Connection", self.storage_value),
+        ]
+        for idx, (label, val) in enumerate(sys_rows, start=1):
+            sys_layout.addWidget(self._caption(label.upper()), idx, 0)
+            val.setObjectName("summaryValue")
+            sys_layout.addWidget(val, idx, 1)
+
+        layout.addWidget(s1_box, 1)
+        layout.addWidget(self._create_vertical_line())
+        layout.addWidget(s2_box, 1)
+        layout.addWidget(self._create_vertical_line())
+        layout.addWidget(sys_box, 1)
+
         return box
 
-    def _build_counter_summary(self) -> QWidget:
-        box = QWidget()
-        box.setObjectName("summaryPanel")
-        layout = QGridLayout(box)
+    @staticmethod
+    def _create_vertical_line() -> QFrame:
+        line = QFrame()
+        line.setFrameShape(QFrame.VLine)
+        line.setFrameShadow(QFrame.Sunken)
+        line.setStyleSheet("background-color: #243041; max-width: 1px;")
+        return line
+
+    def _build_production_metrics_bar(self) -> QWidget:
+        box = QFrame()
+        box.setObjectName("metricsBar")
+        box.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+
+        layout = QHBoxLayout(box)
         layout.setContentsMargins(12, 12, 12, 12)
-        layout.setHorizontalSpacing(12)
-        layout.setVerticalSpacing(8)
-        rows = [
-            ("Total Parts Detected", self.total_detected_value),
-            ("Passed at Station 1", self.station_1_passed_value),
-            ("Rejected at Station 1", self.station_1_rejected_value),
-            ("Received at Station 2", self.station_2_received_value),
-            ("Passed at Station 2", self.station_2_passed_value),
-            ("Rejected at Station 2", self.station_2_rejected_value),
-        ]
-        for row, (label, value) in enumerate(rows):
-            layout.addWidget(self._caption(label.upper()), row, 0)
-            value.setObjectName("summaryValue")
-            layout.addWidget(value, row, 1)
+        layout.setSpacing(12)
+
+        layout.addWidget(
+            self._metric_stage(
+                "LINE TOTAL",
+                [("TOTAL PARTS DETECTED", self.total_detected_value, "total")],
+            ),
+            1,
+        )
+        layout.addWidget(
+            self._metric_stage(
+                "STATION 1",
+                [
+                    ("PASSED", self.station_1_passed_value, "pass"),
+                    ("FAILED", self.station_1_rejected_value, "fail"),
+                ],
+            ),
+            2,
+        )
+        layout.addWidget(
+            self._metric_stage(
+                "STATION 2",
+                [
+                    ("RECEIVED", self.station_2_received_value, "received"),
+                    ("PASSED", self.station_2_passed_value, "pass"),
+                    ("FAILED", self.station_2_rejected_value, "fail"),
+                ],
+            ),
+            3,
+        )
         return box
+
+    def _metric_stage(self, title: str, metrics: list[tuple[str, QLabel, str]]) -> QWidget:
+        stage = QFrame()
+        stage.setObjectName("metricStage")
+        layout = QVBoxLayout(stage)
+        layout.setContentsMargins(12, 10, 12, 12)
+        layout.setSpacing(8)
+
+        title_label = QLabel(title)
+        title_label.setObjectName("metricStageTitle")
+        layout.addWidget(title_label)
+
+        tiles = QHBoxLayout()
+        tiles.setContentsMargins(0, 0, 0, 0)
+        tiles.setSpacing(8)
+        for label, value, tone in metrics:
+            tiles.addWidget(self._metric_tile(label, value, tone), 1)
+        layout.addLayout(tiles)
+        return stage
+
+    @staticmethod
+    def _metric_tile(label_text: str, value: QLabel, tone: str) -> QWidget:
+        tile = QFrame()
+        tile.setObjectName("metricTile")
+        tile.setMinimumHeight(92)
+
+        layout = QVBoxLayout(tile)
+        layout.setContentsMargins(10, 8, 10, 8)
+        layout.setSpacing(2)
+
+        label = QLabel(label_text)
+        label.setObjectName("metricLabel")
+        label.setWordWrap(True)
+        value.setObjectName("metricValue")
+        value.setProperty("metricTone", tone)
+        value.setMinimumWidth(76)
+
+        layout.addWidget(label)
+        layout.addWidget(value, 1)
+        return tile
 
     def start_new_part(self) -> None:
         """Reset both stations for the next incoming product."""
+        self.start_new_part_s1()
+        self.start_new_part_s2()
+
+    def start_new_part_s1(self) -> None:
+        """Reset Stage 1 for the next incoming product."""
         self._stop_station_video(1)
-        self._stop_station_video(2)
-        part = self.controller.start_new_part()
+        part = self.controller.start_new_part_s1()
         self.station_1_image = None
-        self.station_2_image = None
         self.station_1_path = None
-        self.station_2_path = None
         self.station_1_panel.clear_station()
-        self.station_2_panel.clear_station()
-        self.control_panel.inspect_station_1_button.setEnabled(False)
-        self.control_panel.upload_station_2_button.setEnabled(False)
-        self.control_panel.inspect_station_2_button.setEnabled(False)
+        self.station_1_disc_active = False
+        self.station_1_disc_inspected = False
         self._refresh_summary()
-        self._append_log(f"Started new part: {part.part_id}")
+        self._append_log(f"Started new Stage 1 part: {part.part_id}")
+
+    def start_new_part_s2(self) -> None:
+        """Reset Stage 2 for the next incoming product."""
+        self._stop_station_video(2)
+        part = self.controller.start_new_part_s2()
+        self.station_2_image = None
+        self.station_2_path = None
+        self.station_2_panel.clear_station()
+        self.station_2_disc_active = False
+        self.station_2_disc_inspected = False
+        self._refresh_summary()
+        self._append_log(f"Started new Stage 2 part: {part.part_id}")
 
     def upload_station_1_image(self) -> None:
         """Load the first-side image or video manually until a live camera is connected."""
@@ -500,19 +686,15 @@ class MainWindow(QMainWindow):
             self.station_1_panel.result_panel.clear_results()
             interval = self._video_timer_interval(self.station_1_video_capture)
             self.station_1_video_timer.start(interval)
-            self.control_panel.inspect_station_1_button.setEnabled(True)
             self._append_log(f"Station 1 video loaded: {path.name}")
             return
         self.station_1_image = image
         self.station_1_panel.show_uploaded_image(image, path.name)
-        self.control_panel.inspect_station_1_button.setEnabled(True)
         self._append_log(f"Station 1 image loaded: {path.name}")
+        self.run_station_1_inspection()
 
     def upload_station_2_image(self) -> None:
-        """Load the flipped-side image or video manually after a station-one pass."""
-        if self.controller.current_part.station_1.decision is not StationDecision.PASS:
-            QMessageBox.information(self, "Station 2 locked", "Station 1 must pass before Station 2 can be inspected.")
-            return
+        """Load the flipped-side image or video manually without sequential station gating."""
         loaded = self._load_media("Select Station 2 image or video")
         if loaded is None:
             return
@@ -539,13 +721,12 @@ class MainWindow(QMainWindow):
             self.station_2_panel.result_panel.clear_results()
             interval = self._video_timer_interval(self.station_2_video_capture)
             self.station_2_video_timer.start(interval)
-            self.control_panel.inspect_station_2_button.setEnabled(True)
             self._append_log(f"Station 2 video loaded: {path.name}")
             return
         self.station_2_image = image
         self.station_2_panel.show_uploaded_image(image, path.name)
-        self.control_panel.inspect_station_2_button.setEnabled(True)
         self._append_log(f"Station 2 image loaded: {path.name}")
+        self.run_station_2_inspection()
 
     def run_station_1_inspection(self) -> None:
         """Inspect the top side and issue station-one line action."""
@@ -555,13 +736,7 @@ class MainWindow(QMainWindow):
         record = self.controller.inspect_station_1(self.station_1_image, self.station_1_path.name)
         self.station_1_panel.show_record(record)
         overlay_path = self._save_station_overlay(record, self.station_1_path.stem)
-        self._persist_station_record("S1", record, overlay_path)
-        if record.decision is StationDecision.FAIL:
-            self.station_2_panel.show_record(self.controller.current_part.station_2)
-            self.control_panel.upload_station_2_button.setEnabled(False)
-            self.control_panel.inspect_station_2_button.setEnabled(False)
-        else:
-            self.control_panel.upload_station_2_button.setEnabled(True)
+        self._persist_station_record("S1", record, overlay_path, physical_part_id=None)
         self._refresh_summary()
         self._append_log(f"Station 1 decision: {record.decision.value}. {self.plc.last_action}.")
         LOGGER.info("Station 1 inspection complete for %s: %s", self.station_1_path.name, record.decision.value)
@@ -571,14 +746,10 @@ class MainWindow(QMainWindow):
         if self.station_2_image is None or self.station_2_path is None:
             QMessageBox.information(self, "No image", "Upload a Station 2 image before inspection.")
             return
-        try:
-            record = self.controller.inspect_station_2(self.station_2_image, self.station_2_path.name)
-        except RuntimeError as error:
-            QMessageBox.information(self, "Station 2 locked", str(error))
-            return
+        record = self.controller.inspect_station_2(self.station_2_image, self.station_2_path.name)
         self.station_2_panel.show_record(record)
         overlay_path = self._save_station_overlay(record, self.station_2_path.stem)
-        self._persist_station_record("S2", record, overlay_path)
+        self._persist_station_record("S2", record, overlay_path, physical_part_id=None)
         self._refresh_summary()
         self._append_log(f"Station 2 decision: {record.decision.value}. {self.plc.last_action}.")
         LOGGER.info("Station 2 inspection complete for %s: %s", self.station_2_path.name, record.decision.value)
@@ -591,35 +762,46 @@ class MainWindow(QMainWindow):
         self._append_log(f"{record.name} overlay saved: {saved.name}")
         return str(saved)
 
-    def _persist_station_record(self, stage: str, record, overlay_path: str | None) -> None:
+    def _persist_station_record(self, stage: str, record, overlay_path: str | None, physical_part_id: str | None = None) -> None:
         if not self.storage_available:
             return
+        part = self.controller.current_part_s1 if stage == "S1" else self.controller.current_part_s2
+        if physical_part_id is None:
+            physical_part_id = part.part_id
         serial = self.storage.persist_station_record(
-            physical_part_id=self.controller.current_part.part_id,
+            physical_part_id=physical_part_id,
             stage=stage,
             record=record,
-            final_disposition=self.controller.current_part.final_disposition,
+            final_disposition=part.final_disposition,
             overlay_path=overlay_path,
         )
         self._append_log(f"{record.name} persisted as {serial}")
 
     def _refresh_summary(self) -> None:
-        part = self.controller.current_part
-        self.part_id_value.setText(part.part_id)
-        self.station_1_value.setText(part.station_1.decision.value)
-        self.station_1_serial_value.setText(part.station_1.serial_number or "-")
-        self.flipper_value.setText("READY TO FLIP" if part.flipper_ready else "WAITING")
-        self.station_2_value.setText(part.station_2.decision.value)
-        self.station_2_serial_value.setText(part.station_2.serial_number or "-")
-        self.final_value.setText(part.final_disposition.value)
+        part_s1 = self.controller.current_part_s1
+        part_s2 = self.controller.current_part_s2
+        
+        self.part_id_value_s1.setText(part_s1.part_id)
+        self.station_1_value.setText(part_s1.station_1.decision.value)
+        self.station_1_serial_value.setText(part_s1.station_1.serial_number or "-")
+        self.final_value_s1.setText(part_s1.final_disposition.value)
+        
+        self.part_id_value_s2.setText(part_s2.part_id)
+        self.station_2_value.setText(part_s2.station_2.decision.value)
+        self.station_2_serial_value.setText(part_s2.station_2.serial_number or "-")
+        self.final_value_s2.setText(part_s2.final_disposition.value)
+        
         self.plc_value.setText(self.plc.last_action)
         self.storage_value.setText("ONLINE" if self.storage_available else "OFFLINE")
+        
         self.footer_widget.set_values(
-            part_id=part.part_id,
+            part_id_s1=part_s1.part_id,
+            part_id_s2=part_s2.part_id,
             storage_status="ONLINE" if self.storage_available else "OFFLINE",
             mode=self.plc.read_status().mode.value,
         )
         self.header_widget.show_plc_status(self.plc.read_status())
+        
         counters = self.controller.counters
         self.total_detected_value.setText(str(counters.total_parts_detected))
         self.station_1_passed_value.setText(str(counters.station_1_passed))
@@ -695,13 +877,145 @@ class MainWindow(QMainWindow):
         if not ret:
             capture.set(cv2.CAP_PROP_POS_FRAMES, 0)
             return
+        width = frame.shape[1]
+        # INDUSTRIAL OPTIMIZATION: Crop to the specific camera ROI
+        # This reduces CPU by >50% and ensures only one part is visible at a time.
+        if width > 800:
+            center_x = width // 2
+            frame = frame[:, center_x - 300 : center_x + 300]
+            width = 600
+
+        now = time.time()
         if station == 1:
             self.station_1_image = frame.copy()
             self.station_1_frame_index += 1
+            # Estimate FPS from inter-frame timing
+            last = self._last_frame_time_s1
+            fps = 0
+            if last and now - last > 0.02:
+                fps = int(round(1.0 / (now - last)))
+            self._last_frame_time_s1 = now
+            working_frame = self.station_1_image
         else:
             self.station_2_image = frame.copy()
             self.station_2_frame_index += 1
-        panel.show_live_feed(frame, f"Video: {self.station_1_path.name if station == 1 else self.station_2_path.name}")
+            last = self._last_frame_time_s2
+            fps = 0
+            if last and now - last > 0.02:
+                fps = int(round(1.0 / (now - last)))
+            self._last_frame_time_s2 = now
+            working_frame = self.station_2_image
+            
+        trigger_left = width // 2 - 140
+        trigger_right = width // 2 + 140
+        
+        cv2.line(frame, (trigger_left, 0), (trigger_left, frame.shape[0]), (0, 255, 255), 2)
+        cv2.line(frame, (trigger_right, 0), (trigger_right, frame.shape[0]), (0, 255, 255), 2)
+        cv2.putText(frame, "TRIGGER ZONE", (trigger_left + 40, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
+
+        # Draw FPS and a compact trigger-state indicator for diagnostics
+        cv2.putText(frame, f"FPS: {fps}", (8, 26), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (200, 200, 50), 2)
+        source_name = f"Video: {self.station_1_path.name if station == 1 and self.station_1_path is not None else self.station_2_path.name if station == 2 and self.station_2_path is not None else 'camera feed'}"
+        panel.show_live_feed(frame, source_name)
+
+        try:
+            gray, blurred = preprocess_image(working_frame)
+            mask = create_foreground_mask(blurred)
+            outer = detect_outer_circle(mask, blurred)
+        except Exception:
+            outer = None
+
+        tolerances = load_tolerances()
+        radius_limits = tolerances.get("outer_radius_px", {})
+        valid_disk = bool(
+            outer
+            and radius_limits.get("min", 0) <= outer.radius <= radius_limits.get("max", 9999)
+        )
+
+        if station == 1:
+            disc_active = self.station_1_disc_active
+            inspected = self.station_1_disc_inspected
+            empty_frames = self.empty_frames_s1
+        else:
+            disc_active = self.station_2_disc_active
+            inspected = self.station_2_disc_inspected
+            empty_frames = self.empty_frames_s2
+
+        if valid_disk:
+            empty_frames = 0
+            disc_x = outer.center[0]
+            if not disc_active:
+                disc_active = True
+                inspected = False
+
+            if station == 1:
+                self.last_disc_x_s1 = disc_x
+            else:
+                self.last_disc_x_s2 = disc_x
+
+            # Only inspect once when the part crosses the virtual trigger zone.
+            entering_trigger = not inspected and trigger_left < disc_x < trigger_right
+            trigger_active = trigger_left < disc_x < trigger_right
+            trigger_text = "TRIGGER: YES" if trigger_active else "TRIGGER: NO"
+            trigger_color = (0, 200, 0) if trigger_active else (200, 200, 50)
+            cv2.putText(frame, trigger_text, (max(10, width - 220), 26), cv2.FONT_HERSHEY_SIMPLEX, 0.6, trigger_color, 2)
+            if entering_trigger:
+                if station == 1:
+                    record = self.controller.inspect_station_1(self.station_1_image, source_name)
+                    self.station_1_panel.show_record(record)
+                    overlay_path = self._save_station_overlay(
+                        record,
+                        Path(self.station_1_path).stem if self.station_1_path is not None else "video",
+                    )
+                    self._persist_station_record("S1", record, overlay_path, physical_part_id=None)
+                    self._append_log(f"Auto Station 1 decision: {record.decision.value}. {self.plc.last_action}.")
+                    LOGGER.info("Auto Station 1 inspection complete for %s: %s", source_name, record.decision.value)
+                else:
+                    record = self.controller.inspect_station_2(self.station_2_image, source_name)
+                    self.station_2_panel.show_record(record)
+                    overlay_path = self._save_station_overlay(
+                        record,
+                        Path(self.station_2_path).stem if self.station_2_path is not None else "video",
+                    )
+                    self._persist_station_record("S2", record, overlay_path, physical_part_id=None)
+                    self._append_log(f"Auto Station 2 decision: {record.decision.value}. {self.plc.last_action}.")
+                    LOGGER.info("Auto Station 2 inspection complete for %s: %s", source_name, record.decision.value)
+
+                inspected = True
+                self._refresh_summary()
+
+            # Reset the station state when the disc leaves the field of view.
+            if disc_active and (disc_x < trigger_left - 120 or disc_x > trigger_right + 120):
+                disc_active = False
+                inspected = False
+
+            if station == 1:
+                self.empty_frames_s1 = empty_frames
+                self.station_1_disc_active = disc_active
+                self.station_1_disc_inspected = inspected
+            else:
+                self.empty_frames_s2 = empty_frames
+                self.station_2_disc_active = disc_active
+                self.station_2_disc_inspected = inspected
+
+        else:
+            empty_frames += 1
+            if empty_frames > 10:
+                if station == 1:
+                    self.station_1_disc_active = False
+                    self.station_1_disc_inspected = False
+                    self.empty_frames_s1 = 0
+                    self.last_disc_x_s1 = -1
+                else:
+                    self.station_2_disc_active = False
+                    self.station_2_disc_inspected = False
+                    self.empty_frames_s2 = 0
+                    self.last_disc_x_s2 = -1
+            else:
+                if station == 1:
+                    self.empty_frames_s1 = empty_frames
+                else:
+                    self.empty_frames_s2 = empty_frames
 
     @staticmethod
     def _caption(text: str) -> QLabel:

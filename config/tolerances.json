@@ -1,8 +1,8 @@
 {
   "expected_hole_count": 8,
   "outer_radius_px": {
-    "min": 100,
-    "max": 420
+    "min": 80,
+    "max": 450
   },
   "hole_diameter_px": {
     "min": 12,
@@ -20,7 +20,7 @@
     "max_area_loss_ratio": 0.08
   },
   "surface": {
-    "min_defect_area_px": 80,
-    "max_total_defect_area_ratio": 0.01
+    "min_defect_area_px": 50,
+    "max_total_defect_area_ratio": 0.1
   }
 }

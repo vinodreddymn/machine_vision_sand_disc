@@ -54,6 +54,24 @@ def render_overlay(image: np.ndarray, result: InspectionResult) -> np.ndarray:
     for defect in result.surface_defects:
         cv2.drawContours(overlay, [defect.contour], -1, (0, 0, 255), 2)
 
+    if result.outer_circle is not None:
+        stats = [
+            f"R={result.outer_circle.radius}px",
+            f"Holes={len(result.holes)}",
+            f"Defects={len(result.surface_defects)}",
+        ]
+        for index, text in enumerate(stats):
+            cv2.putText(
+                overlay,
+                text,
+                (14, overlay.shape[0] - 16 - index * 22),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.55,
+                (240, 240, 240),
+                1,
+                cv2.LINE_AA,
+            )
+
     banner_color = (0, 150, 0) if result.passed else (0, 0, 190)
     cv2.rectangle(overlay, (12, 12), (190, 54), banner_color, -1)
     cv2.putText(
