@@ -99,6 +99,22 @@ class InspectionEngine:
 
     def inspect_image(self, image: np.ndarray, source_name: str = "manual", station: str = "S1") -> StationRecord:
         record = self.controller.inspect_current_part(image, source_name)
+        
+        # Apply calibration scaling
+        if self.storage_available and self.storage is not None:
+            active_cal = self.storage.get_active_calibration(self.camera_source.name)
+            if active_cal and record.inspection_result and record.inspection_result.measurements:
+                mm_per_pixel = active_cal["mm_per_pixel"]
+                scaled = {}
+                for key, val in record.inspection_result.measurements.items():
+                    if isinstance(val, (int, float)):
+                        scaled[key] = round(val * mm_per_pixel, 3)
+                    elif isinstance(val, tuple) and len(val) == 2:
+                        scaled[key] = (round(val[0] * mm_per_pixel, 3), round(val[1] * mm_per_pixel, 3))
+                    else:
+                        scaled[key] = val
+                record.inspection_result.measurements = scaled
+                
         score = anomaly_score(record.inspection_result) if record.inspection_result else 100.0
         prediction = assisted_prediction(record.inspection_result) if record.inspection_result else "DEFECT"
         if self.storage_available and self.storage is not None:

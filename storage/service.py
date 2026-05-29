@@ -26,6 +26,10 @@ class InspectionRepository(Protocol):
 
     def get_stage_history(self, stage: str, limit: int = 100) -> list[StoredInspection]: ...
 
+    def get_active_calibration(self, camera_id: str) -> dict | None: ...
+    
+    def save_calibration(self, camera_id: str, mm_per_pixel: float, reference_od_mm: float, reference_hole_mm: float) -> int: ...
+
 
 class InspectionStorageService:
     """Generate serials and persist station records."""
@@ -90,3 +94,7 @@ class InspectionStorageService:
     def for_stage(self, stage: str, limit: int = 100) -> list[StoredInspection]:
         """Return recent stored records for one stage."""
         return self.repository.get_stage_history(stage, limit)
+        
+    def get_active_calibration(self, camera_id: str) -> dict | None:
+        """Return the active camera calibration."""
+        return self.repository.get_active_calibration(camera_id)

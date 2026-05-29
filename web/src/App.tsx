@@ -13,8 +13,11 @@ import {
   X,
   Settings,
   Video,
-  Camera
+  Camera,
+  SlidersHorizontal,
+  Cpu
 } from 'lucide-react';
+import { CalibrationPage } from './CalibrationPage';
 import {
   getJson,
   Metrics,
@@ -47,6 +50,7 @@ const emptySnapshot: Snapshot = {
 
 export function App() {
   const [activeTab, setActiveTab] = useState<'production' | 'training' | 'history' | 'settings'>('production');
+  const [settingsTab, setSettingsTab] = useState<'calibration' | 'tolerances'>('calibration');
   const [snapshot, setSnapshot] = useState<Snapshot>(emptySnapshot);
   const [clock, setClock] = useState(new Date());
   const [error, setError] = useState<string | null>(null);
@@ -206,7 +210,7 @@ export function App() {
             onClick={() => setActiveTab('settings')}
           >
             <Settings size={18} />
-            System Settings
+            Settings
           </button>
         </nav>
       </aside>
@@ -220,9 +224,10 @@ export function App() {
             </h1>
             <span style={{ fontSize: '13px', color: '#94a3b8' }}>
               {activeTab === 'production' && 'Real-time Production Inspection HMI'}
-              {activeTab === 'training' && 'Ground-Truth Dataset Collector & Calibration'}
+              {activeTab === 'training' && 'Ground-Truth Dataset Collector & Labeling'}
               {activeTab === 'history' && 'Industry 4.0 SQL History Database Browser'}
-              {activeTab === 'settings' && 'Inspection Tolerances & Mode Control'}
+              {activeTab === 'settings' && settingsTab === 'calibration' && 'One-Time Camera Calibration — px → mm'}
+              {activeTab === 'settings' && settingsTab === 'tolerances' && 'Inspection Tolerances & Mode Control'}
             </span>
           </div>
 

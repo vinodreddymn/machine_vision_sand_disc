@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import asyncio
+import base64
+import io
 from pathlib import Path
 from typing import Any
 
@@ -15,6 +17,7 @@ from pydantic import BaseModel
 
 from config.settings import load_tolerances, save_tolerances, SUPPORTED_INSPECTION_MODES
 from services.inspection_engine import InspectionEngine
+from services.calibration.validation import validate_calibration
 
 
 class LabelRequest(BaseModel):
@@ -29,6 +32,18 @@ class StartPartRequest(BaseModel):
 class ModeRequest(BaseModel):
     mode: str
 
+
+class CalibrationSaveRequest(BaseModel):
+    camera_id: str = "CAM01"
+    outer_diameter_px: float
+    reference_od_mm: float
+    reference_hole_mm: float
+
+
+class CalibrationValidateRequest(BaseModel):
+    camera_id: str = "CAM01"
+    reference_od_mm: float
+    tolerance: float = 0.10
 
 
 def create_app(engine: InspectionEngine | None = None) -> FastAPI:
@@ -196,6 +211,219 @@ def create_app(engine: InspectionEngine | None = None) -> FastAPI:
             raise HTTPException(status_code=404, detail="No station image available.")
         return Response(content=image, media_type="image/jpeg")
 
+    # ─── Calibration Endpoints ────────────────────────────────────────────────
+
+    @app.get("/api/calibration/status")
+    def calibration_status(camera_id: str = "CAM01") -> dict[str, Any]:
+        """Return current calibration status for a camera."""
+        if not engine.storage_available or engine.storage is None:
+            return {"calibrated": False, "storage": "OFFLINE"}
+        cal = engine.storage.get_active_calibration(camera_id)
+        if cal:
+            cal_date = cal["calibration_date"]
+            if hasattr(cal_date, "isoformat"):
+                cal_date = cal_date.isoformat()
+            return {
+                "calibrated": True,
+                "camera_id": cal["camera_id"],
+                "calibration_date": cal_date,
+                "mm_per_pixel": cal["mm_per_pixel"],
+                "reference_od_mm": cal["reference_od_mm"],
+                "reference_hole_mm": cal["reference_hole_mm"],
+            }
+        return {"calibrated": False}
+
+    @app.post("/api/calibration/capture")
+    async def calibration_capture(file: UploadFile = File(...)) -> dict[str, Any]:
+        """Upload an image for calibration circle detection. Returns pixel measurements + overlay image."""
+        from services.calibration.circle_detector import detect_calibration_circles
+        payload = await file.read()
+        image_array = np.frombuffer(payload, dtype=np.uint8)
+        image = cv2.imdecode(image_array, cv2.IMREAD_COLOR)
+        if image is None:
+            # Try to grab current live frame from engine
+            if engine.latest_frame is not None:
+                image = engine.latest_frame.copy()
+            else:
+                raise HTTPException(status_code=400, detail="Could not decode image.")
+
+        result = detect_calibration_circles(image)
+        if result is None:
+            raise HTTPException(status_code=422, detail="Could not detect calibration circles in image. Ensure disc is well-lit and centered.")
+
+        ok, encoded = cv2.imencode(".jpg", result["overlay"])
+        if not ok:
+            raise HTTPException(status_code=500, detail="Could not encode overlay image.")
+        overlay_b64 = base64.b64encode(encoded.tobytes()).decode()
+
+        return {
+            "outer_diameter_px": result["outer_diameter_px"],
+            "hole_diameter_px": result["hole_diameter_px"],
+            "overlay_image": f"data:image/jpeg;base64,{overlay_b64}",
+        }
+
+    @app.post("/api/calibration/capture-live")
+    def calibration_capture_live() -> dict[str, Any]:
+        """Capture the current live camera frame and run circle detection."""
+        from services.calibration.circle_detector import detect_calibration_circles
+        if engine.latest_frame is None:
+            raise HTTPException(status_code=503, detail="No live frame available. Start the inspection engine first.")
+        image = engine.latest_frame.copy()
+        result = detect_calibration_circles(image)
+        if result is None:
+            raise HTTPException(status_code=422, detail="Could not detect calibration circles. Ensure disc is well-lit and centered.")
+        ok, encoded = cv2.imencode(".jpg", result["overlay"])
+        if not ok:
+            raise HTTPException(status_code=500, detail="Could not encode overlay image.")
+        overlay_b64 = base64.b64encode(encoded.tobytes()).decode()
+        return {
+            "outer_diameter_px": result["outer_diameter_px"],
+            "hole_diameter_px": result["hole_diameter_px"],
+            "overlay_image": f"data:image/jpeg;base64,{overlay_b64}",
+        }
+
+    @app.post("/api/calibration/save")
+    def calibration_save(request: CalibrationSaveRequest) -> dict[str, Any]:
+        """Calculate mm_per_pixel and persist the calibration."""
+        if not engine.storage_available or engine.storage is None:
+            raise HTTPException(status_code=503, detail="Storage is offline. Cannot save calibration.")
+        mm_per_pixel = request.reference_od_mm / request.outer_diameter_px
+        record_id = engine.storage.repository.save_calibration(
+            camera_id=request.camera_id,
+            mm_per_pixel=mm_per_pixel,
+            reference_od_mm=request.reference_od_mm,
+            reference_hole_mm=request.reference_hole_mm,
+        )
+        return {
+            "status": "success",
+            "record_id": record_id,
+            "mm_per_pixel": round(mm_per_pixel, 6),
+            "camera_id": request.camera_id,
+        }
+
+    @app.get("/api/calibration/history")
+    def calibration_history(camera_id: str = "CAM01") -> list[dict[str, Any]]:
+        """Return all calibration records for a camera."""
+        if not engine.storage_available or engine.storage is None:
+            return []
+        records = engine.storage.repository.get_calibration_history(camera_id)
+        for rec in records:
+            if hasattr(rec.get("calibration_date"), "isoformat"):
+                rec["calibration_date"] = rec["calibration_date"].isoformat()
+        return records
+
+    @app.delete("/api/calibration/{record_id}")
+    def calibration_delete(record_id: int) -> dict[str, str]:
+        """Deactivate a calibration record."""
+        if not engine.storage_available or engine.storage is None:
+            raise HTTPException(status_code=503, detail="Storage is offline.")
+        with engine.storage.repository._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute("UPDATE camera_calibration SET active = FALSE WHERE id = %s", (record_id,))
+        return {"status": "deleted", "record_id": str(record_id)}
+
+    @app.post("/api/calibration/validate")
+    def calibration_validate(request: CalibrationValidateRequest) -> dict[str, Any]:
+        """Validate the active calibration against a known reference disc."""
+        from services.calibration.circle_detector import detect_calibration_circles
+        if not engine.storage_available or engine.storage is None:
+            raise HTTPException(status_code=503, detail="Storage is offline.")
+        cal = engine.storage.get_active_calibration(request.camera_id)
+        if not cal:
+            raise HTTPException(status_code=404, detail="No active calibration found.")
+        if engine.latest_frame is None:
+            raise HTTPException(status_code=503, detail="No live frame available.")
+        result = detect_calibration_circles(engine.latest_frame.copy())
+        if result is None:
+            raise HTTPException(status_code=422, detail="Could not detect circles in live frame.")
+        validation = validate_calibration(
+            measured_px=result["outer_diameter_px"],
+            active_mm_per_pixel=cal["mm_per_pixel"],
+            expected_mm=request.reference_od_mm,
+            tolerance=request.tolerance,
+        )
+        ok, encoded = cv2.imencode(".jpg", result["overlay"])
+        if ok:
+            validation["overlay_image"] = f"data:image/jpeg;base64,{base64.b64encode(encoded.tobytes()).decode()}"
+        return validation
+
+    @app.get("/api/calibration/report")
+    def calibration_report(camera_id: str = "CAM01") -> Response:
+        """Generate and download a PDF calibration report."""
+        try:
+            from fpdf import FPDF
+        except ImportError:
+            raise HTTPException(status_code=501, detail="PDF library not available. Install fpdf2.")
+
+        if not engine.storage_available or engine.storage is None:
+            raise HTTPException(status_code=503, detail="Storage is offline.")
+        records = engine.storage.repository.get_calibration_history(camera_id)
+        active_cal = engine.storage.get_active_calibration(camera_id)
+
+        pdf = FPDF()
+        pdf.add_page()
+        pdf.set_font("Helvetica", "B", 16)
+        pdf.set_fill_color(20, 25, 40)
+        pdf.set_text_color(255, 255, 255)
+        pdf.cell(0, 12, "Camera Calibration Report", new_x="LMARGIN", new_y="NEXT", fill=True, align="C")
+        pdf.ln(4)
+
+        pdf.set_font("Helvetica", "", 11)
+        pdf.set_text_color(30, 30, 30)
+        pdf.cell(0, 8, f"Camera ID: {camera_id}", new_x="LMARGIN", new_y="NEXT")
+
+        if active_cal:
+            cal_date = active_cal["calibration_date"]
+            if hasattr(cal_date, "isoformat"):
+                cal_date = cal_date.isoformat()
+            pdf.set_fill_color(220, 255, 220)
+            pdf.cell(0, 8, f"Status: CALIBRATED", new_x="LMARGIN", new_y="NEXT", fill=True)
+            pdf.cell(0, 8, f"Last Calibration: {cal_date}", new_x="LMARGIN", new_y="NEXT")
+            pdf.cell(0, 8, f"Scale Factor: {active_cal['mm_per_pixel']:.6f} mm/pixel", new_x="LMARGIN", new_y="NEXT")
+            pdf.cell(0, 8, f"Reference OD: {active_cal['reference_od_mm']} mm", new_x="LMARGIN", new_y="NEXT")
+            pdf.cell(0, 8, f"Reference Hole: {active_cal['reference_hole_mm']} mm", new_x="LMARGIN", new_y="NEXT")
+        else:
+            pdf.set_fill_color(255, 200, 200)
+            pdf.cell(0, 8, "Status: NOT CALIBRATED", new_x="LMARGIN", new_y="NEXT", fill=True)
+
+        pdf.ln(6)
+        pdf.set_font("Helvetica", "B", 12)
+        pdf.cell(0, 8, "Calibration History", new_x="LMARGIN", new_y="NEXT")
+        pdf.set_font("Helvetica", "B", 9)
+        pdf.set_fill_color(200, 200, 200)
+        col_w = [10, 45, 35, 30, 30, 20]
+        headers = ["ID", "Date", "mm/pixel", "Ref OD (mm)", "Ref Hole (mm)", "Active"]
+        for h, w in zip(headers, col_w):
+            pdf.cell(w, 7, h, border=1, fill=True)
+        pdf.ln()
+        pdf.set_font("Helvetica", "", 9)
+        for rec in records:
+            cd = rec.get("calibration_date", "")
+            if hasattr(cd, "isoformat"):
+                cd = cd.isoformat()[:19]
+            row = [
+                str(rec.get("id", "")),
+                str(cd),
+                f"{rec.get('mm_per_pixel', 0):.6f}",
+                str(rec.get("reference_od_mm", "")),
+                str(rec.get("reference_hole_mm", "")),
+                "YES" if rec.get("active") else "no",
+            ]
+            for val, w in zip(row, col_w):
+                pdf.cell(w, 7, val, border=1)
+            pdf.ln()
+
+        buf = io.BytesIO()
+        pdf.output(buf)
+        buf.seek(0)
+        return Response(
+            content=buf.read(),
+            media_type="application/pdf",
+            headers={"Content-Disposition": f"attachment; filename=calibration_report_{camera_id}.pdf"},
+        )
+
+    # ─── WebSocket ────────────────────────────────────────────────────────────
+
     @app.websocket("/ws/logs")
     async def websocket_logs(websocket: WebSocket) -> None:
         await websocket.accept()
@@ -214,3 +442,4 @@ def create_app(engine: InspectionEngine | None = None) -> FastAPI:
 
     app.state.engine = engine
     return app
+

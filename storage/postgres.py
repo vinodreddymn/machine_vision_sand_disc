@@ -118,6 +118,19 @@ BEGIN
     RETURN partition_name;
 END
 $$;
+
+CREATE TABLE IF NOT EXISTS public.camera_calibration (
+    id SERIAL PRIMARY KEY,
+    camera_id VARCHAR(50) NOT NULL,
+    calibration_date TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    mm_per_pixel FLOAT NOT NULL,
+    reference_od_mm FLOAT NOT NULL,
+    reference_hole_mm FLOAT NOT NULL,
+    active BOOLEAN DEFAULT TRUE
+);
+
+CREATE INDEX IF NOT EXISTS idx_camera_calibration_active
+    ON public.camera_calibration (camera_id, active);
 """
 
 
@@ -298,3 +311,53 @@ class PostgresInspectionRepository:
     def _connect(self, **kwargs: Any) -> Iterator[psycopg.Connection]:
         with psycopg.connect(self.dsn, **kwargs) as connection:
             yield connection
+
+    def save_calibration(self, camera_id: str, mm_per_pixel: float, reference_od_mm: float, reference_hole_mm: float) -> int:
+        """Save a new active camera calibration."""
+        with self._connect() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "UPDATE camera_calibration SET active = FALSE WHERE camera_id = %s",
+                    (camera_id,)
+                )
+                cursor.execute(
+                    """
+                    INSERT INTO camera_calibration (camera_id, mm_per_pixel, reference_od_mm, reference_hole_mm, active)
+                    VALUES (%s, %s, %s, %s, TRUE)
+                    RETURNING id
+                    """,
+                    (camera_id, mm_per_pixel, reference_od_mm, reference_hole_mm)
+                )
+                return int(cursor.fetchone()[0])
+
+    def get_active_calibration(self, camera_id: str) -> dict[str, Any] | None:
+        """Get the current active calibration for a camera."""
+        with self._connect(row_factory=dict_row) as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT id, camera_id, calibration_date, mm_per_pixel, reference_od_mm, reference_hole_mm
+                    FROM camera_calibration
+                    WHERE camera_id = %s AND active = TRUE
+                    ORDER BY calibration_date DESC
+                    LIMIT 1
+                    """,
+                    (camera_id,)
+                )
+                return cursor.fetchone()
+
+    def get_calibration_history(self, camera_id: str) -> list[dict[str, Any]]:
+        """Get all calibration history for a camera."""
+        with self._connect(row_factory=dict_row) as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT id, camera_id, calibration_date, mm_per_pixel, reference_od_mm, reference_hole_mm, active
+                    FROM camera_calibration
+                    WHERE camera_id = %s
+                    ORDER BY calibration_date DESC
+                    """,
+                    (camera_id,)
+                )
+                return cursor.fetchall()
+
