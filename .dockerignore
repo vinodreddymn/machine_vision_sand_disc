@@ -1,0 +1,13 @@
+.git
+.venv
+__pycache__
+.pytest_cache
+web/node_modules
+web/dist
+dataset
+dataset_export
+outputs/passed
+outputs/failed
+outputs/logs
+*.mp4
+*.avi

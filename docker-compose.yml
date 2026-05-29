@@ -1,0 +1,31 @@
+services:
+  diskvision:
+    build: .
+    command: python main.py --web
+    environment:
+      DISK_VISION_MODE: DATA_COLLECTION
+      DISK_VISION_API_HOST: 0.0.0.0
+      DISK_VISION_API_PORT: 8000
+      DISK_VISION_POSTGRES_DSN: dbname=diskvision user=postgres password=postgres host=postgres port=5432
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./dataset:/app/dataset
+      - ./dataset_export:/app/dataset_export
+      - ./outputs:/app/outputs
+    depends_on:
+      - postgres
+
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: diskvision
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:

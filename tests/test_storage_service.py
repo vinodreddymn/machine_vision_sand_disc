@@ -50,30 +50,34 @@ def test_storage_service_assigns_stage_serial_and_persists_payload() -> None:
     service = InspectionStorageService(repository)
     result = inspect_disk(build_synthetic_disk())
     record = StationRecord(
-        name="Station 1",
+        name="Inspection Station",
         decision=StationDecision.PASS,
-        source_name="top.png",
+        source_name="disc.png",
         inspection_result=result,
     )
     inspected_at = datetime(2026, 5, 17, 14, 35, 22, tzinfo=timezone.utc)
 
     serial = service.persist_station_record(
         physical_part_id="PART001",
-        stage="S1",
+        stage="SINGLE",
         record=record,
         final_disposition=FinalDisposition.IN_PROGRESS,
-        overlay_path="outputs/passed/station_1_top.png",
+        overlay_path="outputs/passed/single_station_disc.png",
         inspected_at=inspected_at,
+        inspection_mode="DATA_COLLECTION",
+        cycle_time_ms=42,
     )
 
-    assert serial == "S1-20260517-143522-000001"
+    assert serial == "SINGLE-20260517-143522-000001"
     assert record.serial_number == serial
     assert record.inspected_at == inspected_at
     assert repository.saved[0]["physical_part_id"] == "PART001"
     assert repository.saved[0]["measurements"]["hole_count"] == load_tolerances()["expected_hole_count"]
+    assert repository.saved[0]["inspection_mode"] == "DATA_COLLECTION"
+    assert repository.saved[0]["cycle_time_ms"] == 42
 
 
-def test_storage_service_serials_increment_per_stage_per_day() -> None:
+def test_storage_service_serials_increment_per_station_per_day() -> None:
     repository = FakeRepository()
     service = InspectionStorageService(repository)
     result = inspect_disk(build_synthetic_disk())
@@ -81,32 +85,23 @@ def test_storage_service_serials_increment_per_stage_per_day() -> None:
 
     first = service.persist_station_record(
         physical_part_id="P1",
-        stage="S1",
-        record=StationRecord("Station 1", StationDecision.PASS, inspection_result=result),
+        stage="SINGLE",
+        record=StationRecord("Inspection Station", StationDecision.PASS, inspection_result=result),
         final_disposition=FinalDisposition.IN_PROGRESS,
         overlay_path=None,
         inspected_at=timestamp,
     )
     second = service.persist_station_record(
-        physical_part_id="P1",
-        stage="S2",
-        record=StationRecord("Station 2", StationDecision.PASS, inspection_result=result),
-        final_disposition=FinalDisposition.ACCEPTED,
-        overlay_path=None,
-        inspected_at=timestamp,
-    )
-    third = service.persist_station_record(
         physical_part_id="P2",
-        stage="S1",
-        record=StationRecord("Station 1", StationDecision.PASS, inspection_result=result),
+        stage="SINGLE",
+        record=StationRecord("Inspection Station", StationDecision.PASS, inspection_result=result),
         final_disposition=FinalDisposition.IN_PROGRESS,
         overlay_path=None,
         inspected_at=timestamp,
     )
 
     assert first.endswith("000001")
-    assert second.endswith("000001")
-    assert third.endswith("000002")
+    assert second.endswith("000002")
 
 
 def test_storage_service_returns_sequential_part_ids() -> None:

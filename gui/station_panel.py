@@ -10,7 +10,7 @@ from gui.result_panel import ResultPanel
 
 
 class StationPanel(QWidget):
-    """Display one physical station in the two-camera inspection line."""
+    """Display one physical station in the inspection line."""
 
     def __init__(self, title: str) -> None:
         super().__init__()
@@ -73,7 +73,7 @@ class StationPanel(QWidget):
         if record.inspection_result is not None:
             self.result_panel.show_result(record.inspection_result)
         elif record.decision is StationDecision.SKIPPED:
-            self.capture_viewer.clear_image("Skipped after Station 1 reject")
+            self.capture_viewer.clear_image("Skipped")
             self.result_panel.show_skipped()
 
     def clear_station(self) -> None:

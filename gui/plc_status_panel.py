@@ -27,9 +27,8 @@ class PLCStatusPanel(QFrame):
         self.run_status = self._value_label()
         self.mode = self._value_label()
         self.conveyor = self._value_label()
-        self.station_1_reject = self._value_label()
-        self.flipper = self._value_label()
-        self.station_2_reject = self._value_label()
+        self.reject = self._value_label()
+        self.accept_gate = self._value_label()
 
         layout = QHBoxLayout(self)
 
@@ -40,9 +39,8 @@ class PLCStatusPanel(QFrame):
             ("PLC", self.run_status),
             ("MODE", self.mode),
             ("CONVEYOR", self.conveyor),
-            ("S1 REJECT", self.station_1_reject),
-            ("FLIPPER", self.flipper),
-            ("S2 REJECT", self.station_2_reject),
+            ("REJECT", self.reject),
+            ("ACCEPT", self.accept_gate),
         ]
 
         for caption, value in fields:
@@ -78,13 +76,8 @@ class PLCStatusPanel(QFrame):
         self.run_status.setText(status.run_status.value)
         self.mode.setText(status.mode.value)
         self.conveyor.setText(status.conveyor_status.value)
-        self.station_1_reject.setText(
-            status.station_1_reject_actuator.value
-        )
-        self.flipper.setText(status.flipper_status.value)
-        self.station_2_reject.setText(
-            status.station_2_reject_actuator.value
-        )
+        self.reject.setText(status.reject_actuator.value)
+        self.accept_gate.setText(status.accept_gate.value)
 
     @staticmethod
     def _value_label() -> QLabel:

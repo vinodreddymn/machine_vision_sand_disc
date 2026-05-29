@@ -1,4 +1,4 @@
-"""PostgreSQL persistence for station inspection history."""
+"""PostgreSQL persistence for single-station inspection history."""
 
 from __future__ import annotations
 
@@ -14,15 +14,28 @@ from storage.models import StoredInspection
 
 
 SCHEMA_SQL = """
-CREATE TABLE IF NOT EXISTS stage1_serial_registry (
+CREATE TABLE IF NOT EXISTS inspection_serial_registry (
     serial_number TEXT PRIMARY KEY,
     physical_part_id TEXT NOT NULL,
+    stage TEXT NOT NULL DEFAULT 'S1',
+    station_code TEXT NOT NULL DEFAULT 'SINGLE',
     first_seen_at TIMESTAMPTZ NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS stage1_inspection_records (
+ALTER TABLE IF EXISTS inspection_serial_registry
+    ADD COLUMN IF NOT EXISTS stage TEXT NOT NULL DEFAULT 'S1';
+
+ALTER TABLE IF EXISTS inspection_serial_registry
+    ALTER COLUMN stage SET DEFAULT 'S1';
+
+ALTER TABLE IF EXISTS inspection_serial_registry
+    ADD COLUMN IF NOT EXISTS station_code TEXT NOT NULL DEFAULT 'SINGLE';
+
+CREATE TABLE IF NOT EXISTS inspection_records (
     id BIGSERIAL NOT NULL,
     physical_part_id TEXT NOT NULL,
+    stage TEXT NOT NULL DEFAULT 'S1',
+    station_code TEXT NOT NULL DEFAULT 'SINGLE',
     serial_number TEXT NOT NULL,
     inspected_at TIMESTAMPTZ NOT NULL,
     decision TEXT NOT NULL,
@@ -32,47 +45,34 @@ CREATE TABLE IF NOT EXISTS stage1_inspection_records (
     measurements JSONB NOT NULL,
     defects JSONB NOT NULL,
     overlay_path TEXT,
-    CONSTRAINT stage1_inspection_records_pkey PRIMARY KEY (id, inspected_at)
+    inspection_mode TEXT NOT NULL DEFAULT 'PRODUCTION',
+    cycle_time_ms INTEGER,
+    CONSTRAINT inspection_records_pkey PRIMARY KEY (id, inspected_at)
 ) PARTITION BY RANGE (inspected_at);
 
-CREATE INDEX IF NOT EXISTS idx_stage1_inspection_records_part
-    ON stage1_inspection_records (physical_part_id, inspected_at);
+ALTER TABLE IF EXISTS inspection_records
+    ADD COLUMN IF NOT EXISTS stage TEXT NOT NULL DEFAULT 'S1';
 
-CREATE INDEX IF NOT EXISTS idx_stage1_inspection_records_stage_time
-    ON stage1_inspection_records (inspected_at DESC);
+ALTER TABLE IF EXISTS inspection_records
+    ALTER COLUMN stage SET DEFAULT 'S1';
 
-CREATE INDEX IF NOT EXISTS idx_stage1_inspection_records_serial_lookup
-    ON stage1_inspection_records (serial_number, inspected_at DESC);
+ALTER TABLE IF EXISTS inspection_records
+    ADD COLUMN IF NOT EXISTS station_code TEXT NOT NULL DEFAULT 'SINGLE';
 
-CREATE TABLE IF NOT EXISTS stage2_serial_registry (
-    serial_number TEXT PRIMARY KEY,
-    physical_part_id TEXT NOT NULL,
-    first_seen_at TIMESTAMPTZ NOT NULL
-);
+ALTER TABLE IF EXISTS inspection_records
+    ADD COLUMN IF NOT EXISTS inspection_mode TEXT NOT NULL DEFAULT 'PRODUCTION';
 
-CREATE TABLE IF NOT EXISTS stage2_inspection_records (
-    id BIGSERIAL NOT NULL,
-    physical_part_id TEXT NOT NULL,
-    serial_number TEXT NOT NULL,
-    inspected_at TIMESTAMPTZ NOT NULL,
-    decision TEXT NOT NULL,
-    final_disposition TEXT NOT NULL,
-    source_name TEXT,
-    reject_requested BOOLEAN NOT NULL DEFAULT FALSE,
-    measurements JSONB NOT NULL,
-    defects JSONB NOT NULL,
-    overlay_path TEXT,
-    CONSTRAINT stage2_inspection_records_pkey PRIMARY KEY (id, inspected_at)
-) PARTITION BY RANGE (inspected_at);
+ALTER TABLE IF EXISTS inspection_records
+    ADD COLUMN IF NOT EXISTS cycle_time_ms INTEGER;
 
-CREATE INDEX IF NOT EXISTS idx_stage2_inspection_records_part
-    ON stage2_inspection_records (physical_part_id, inspected_at);
+CREATE INDEX IF NOT EXISTS idx_inspection_records_part
+    ON inspection_records (physical_part_id, inspected_at);
 
-CREATE INDEX IF NOT EXISTS idx_stage2_inspection_records_stage_time
-    ON stage2_inspection_records (inspected_at DESC);
+CREATE INDEX IF NOT EXISTS idx_inspection_records_station_time
+    ON inspection_records (station_code, inspected_at DESC);
 
-CREATE INDEX IF NOT EXISTS idx_stage2_inspection_records_serial_lookup
-    ON stage2_inspection_records (serial_number, inspected_at DESC);
+CREATE INDEX IF NOT EXISTS idx_inspection_records_serial_lookup
+    ON inspection_records (serial_number, inspected_at DESC);
 
 CREATE TABLE IF NOT EXISTS serial_counters (
     stage TEXT NOT NULL,
@@ -86,33 +86,30 @@ CREATE TABLE IF NOT EXISTS part_counters (
     last_value BIGINT NOT NULL
 );
 
-CREATE OR REPLACE FUNCTION ensure_stage1_partition(partition_day DATE)
-RETURNS TEXT
-LANGUAGE plpgsql
-AS $$
-DECLARE
-    partition_name TEXT := format('stage1_inspection_records_%s', to_char(partition_day, 'YYYY_MM_DD'));
-BEGIN
-    EXECUTE format(
-        'CREATE TABLE IF NOT EXISTS public.%I PARTITION OF public.stage1_inspection_records
-         FOR VALUES FROM (%L) TO (%L)',
-        partition_name,
-        partition_day::TIMESTAMPTZ,
-        (partition_day + 1)::TIMESTAMPTZ
-    );
-    RETURN partition_name;
-END
-$$;
+CREATE TABLE IF NOT EXISTS dataset_label_records (
+    id BIGSERIAL PRIMARY KEY,
+    physical_part_id TEXT NOT NULL,
+    station_code TEXT NOT NULL,
+    serial_number TEXT,
+    labeled_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    system_prediction TEXT NOT NULL,
+    operator_label TEXT NOT NULL,
+    anomaly_score NUMERIC(6, 2),
+    metadata_path TEXT NOT NULL
+);
 
-CREATE OR REPLACE FUNCTION ensure_stage2_partition(partition_day DATE)
+CREATE INDEX IF NOT EXISTS idx_dataset_label_records_part
+    ON dataset_label_records (physical_part_id, labeled_at DESC);
+
+CREATE OR REPLACE FUNCTION ensure_inspection_records_partition(partition_day DATE)
 RETURNS TEXT
 LANGUAGE plpgsql
 AS $$
 DECLARE
-    partition_name TEXT := format('stage2_inspection_records_%s', to_char(partition_day, 'YYYY_MM_DD'));
+    partition_name TEXT := format('inspection_records_%s', to_char(partition_day, 'YYYY_MM_DD'));
 BEGIN
     EXECUTE format(
-        'CREATE TABLE IF NOT EXISTS public.%I PARTITION OF public.stage2_inspection_records
+        'CREATE TABLE IF NOT EXISTS public.%I PARTITION OF public.inspection_records
          FOR VALUES FROM (%L) TO (%L)',
         partition_name,
         partition_day::TIMESTAMPTZ,
@@ -135,21 +132,13 @@ class PostgresInspectionRepository:
         with self._connect() as connection:
             with connection.cursor() as cursor:
                 cursor.execute(SCHEMA_SQL)
+                cursor.execute("SELECT ensure_inspection_records_partition(CURRENT_DATE)")
                 cursor.execute(
-                    "SELECT ensure_stage1_partition(CURRENT_DATE)"
-                )
-                cursor.execute(
-                    "SELECT ensure_stage1_partition((CURRENT_DATE + INTERVAL '1 day')::DATE)"
-                )
-                cursor.execute(
-                    "SELECT ensure_stage2_partition(CURRENT_DATE)"
-                )
-                cursor.execute(
-                    "SELECT ensure_stage2_partition((CURRENT_DATE + INTERVAL '1 day')::DATE)"
+                    "SELECT ensure_inspection_records_partition((CURRENT_DATE + INTERVAL '1 day')::DATE)"
                 )
 
     def next_serial(self, stage: str, inspected_at: datetime) -> str:
-        """Reserve the next per-stage/per-day serial number."""
+        """Reserve the next per-station/per-day serial number."""
         production_date = inspected_at.date()
         with self._connect() as connection:
             with connection.cursor() as cursor:
@@ -197,31 +186,31 @@ class PostgresInspectionRepository:
         measurements: dict[str, Any],
         defects: list[str],
         overlay_path: str | None,
+        inspection_mode: str = "PRODUCTION",
+        cycle_time_ms: int | None = None,
     ) -> int:
-        """Persist one station inspection and return its database id."""
-        registry_table = "stage1_serial_registry" if stage == "S1" else "stage2_serial_registry"
-        records_table = "stage1_inspection_records" if stage == "S1" else "stage2_inspection_records"
+        """Persist one inspection and return its database id."""
         with self._connect() as connection:
             with connection.cursor() as cursor:
                 cursor.execute(
-                    f"""
-                    INSERT INTO {registry_table} (
+                    """
+                    INSERT INTO inspection_serial_registry (
                         serial_number,
                         physical_part_id,
+                        stage,
+                        station_code,
                         first_seen_at
                     )
-                    VALUES (%s, %s, %s)
+                    VALUES (%s, %s, %s, %s, %s)
                     """,
-                    (
-                        serial_number,
-                        physical_part_id,
-                        inspected_at,
-                    ),
+                    (serial_number, physical_part_id, "S1", stage, inspected_at),
                 )
                 cursor.execute(
-                    f"""
-                    INSERT INTO {records_table} (
+                    """
+                    INSERT INTO inspection_records (
                         physical_part_id,
+                        stage,
+                        station_code,
                         serial_number,
                         inspected_at,
                         decision,
@@ -230,13 +219,17 @@ class PostgresInspectionRepository:
                         reject_requested,
                         measurements,
                         defects,
-                        overlay_path
+                        overlay_path,
+                        inspection_mode,
+                        cycle_time_ms
                     )
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     RETURNING id
                     """,
                     (
                         physical_part_id,
+                        "S1",
+                        stage,
                         serial_number,
                         inspected_at,
                         decision,
@@ -246,6 +239,8 @@ class PostgresInspectionRepository:
                         Jsonb(measurements),
                         Jsonb(defects),
                         overlay_path,
+                        inspection_mode,
+                        cycle_time_ms,
                     ),
                 )
                 return int(cursor.fetchone()[0])
@@ -254,11 +249,10 @@ class PostgresInspectionRepository:
         """Return the newest stored inspections first."""
         return self._fetch_many(
             """
-            SELECT id, physical_part_id, 'S1' AS stage, serial_number, inspected_at, decision, final_disposition, source_name, reject_requested, measurements, defects, overlay_path
-            FROM stage1_inspection_records
-            UNION ALL
-            SELECT id, physical_part_id, 'S2' AS stage, serial_number, inspected_at, decision, final_disposition, source_name, reject_requested, measurements, defects, overlay_path
-            FROM stage2_inspection_records
+            SELECT id, physical_part_id, station_code AS stage, serial_number, inspected_at, decision,
+                   final_disposition, source_name, reject_requested, measurements, defects, overlay_path,
+                   inspection_mode, cycle_time_ms
+            FROM inspection_records
             ORDER BY inspected_at DESC, id DESC
             LIMIT %s
             """,
@@ -266,16 +260,13 @@ class PostgresInspectionRepository:
         )
 
     def get_part_history(self, physical_part_id: str) -> list[StoredInspection]:
-        """Return all stage records for one physical part."""
+        """Return all records for one physical part."""
         return self._fetch_many(
             """
-            SELECT * FROM (
-                SELECT id, physical_part_id, 'S1' AS stage, serial_number, inspected_at, decision, final_disposition, source_name, reject_requested, measurements, defects, overlay_path
-                FROM stage1_inspection_records
-                UNION ALL
-                SELECT id, physical_part_id, 'S2' AS stage, serial_number, inspected_at, decision, final_disposition, source_name, reject_requested, measurements, defects, overlay_path
-                FROM stage2_inspection_records
-            ) AS combined
+            SELECT id, physical_part_id, station_code AS stage, serial_number, inspected_at, decision,
+                   final_disposition, source_name, reject_requested, measurements, defects, overlay_path,
+                   inspection_mode, cycle_time_ms
+            FROM inspection_records
             WHERE physical_part_id = %s
             ORDER BY inspected_at ASC, id ASC
             """,
@@ -283,12 +274,14 @@ class PostgresInspectionRepository:
         )
 
     def get_stage_history(self, stage: str, limit: int = 100) -> list[StoredInspection]:
-        """Return newest records for one stage."""
-        records_table = "stage1_inspection_records" if stage == "S1" else "stage2_inspection_records"
+        """Return newest records for one station code."""
         return self._fetch_many(
-            f"""
-            SELECT id, physical_part_id, %s AS stage, serial_number, inspected_at, decision, final_disposition, source_name, reject_requested, measurements, defects, overlay_path
-            FROM {records_table}
+            """
+            SELECT id, physical_part_id, station_code AS stage, serial_number, inspected_at, decision,
+                   final_disposition, source_name, reject_requested, measurements, defects, overlay_path,
+                   inspection_mode, cycle_time_ms
+            FROM inspection_records
+            WHERE station_code = %s
             ORDER BY inspected_at DESC, id DESC
             LIMIT %s
             """,

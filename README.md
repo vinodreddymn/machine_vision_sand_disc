@@ -1,6 +1,6 @@
 # DiskVisionInspector
 
-Starter desktop application for two-stage classical machine-vision inspection of circular abrasive disks. The current phase uses manual image upload, OpenCV, and PySide6; camera, trigger, PLC, conveyor, flipper, and AI hooks are isolated so they can be added without rewriting the inspection core.
+Desktop application for single-station classical machine-vision inspection of circular abrasive discs. The current phase uses manual image/video upload, OpenCV, PySide6, PLC boundaries, and PostgreSQL persistence; the workflow is intentionally kept small so a later two-stage inspection line can be added cleanly.
 
 ## VS Code setup
 
@@ -24,8 +24,25 @@ pip install -r requirements.txt
 ## Run
 
 ```powershell
-python main.py
+python main.py --gui
 ```
+
+The desktop GUI is still the default, so `python main.py` continues to work.
+
+Headless LAN-accessible mode:
+
+```powershell
+python main.py --web
+```
+
+The web dashboard and REST API are served from:
+
+```text
+http://localhost:8000
+```
+
+`python main.py --headless` is kept as an alias for the same web/backend runtime
+so headless deployments do not import the PySide6 GUI.
 
 ## Tests
 
@@ -35,10 +52,13 @@ pytest
 
 ## Architecture
 
-- `automation/`: two-station workflow and PLC boundary
+- `automation/`: single-station workflow and PLC boundary
 - `vision/`: deterministic inspection algorithms and overlay generation
-- `gui/`: PySide6 widgets only; no inspection logic hidden in the UI
-- `camera/`: camera interface and simulator for future live acquisition
+- `services/`: GUI-independent inspection engine plus FastAPI backend
+- `web/`: React/Vite LAN dashboard served by FastAPI after build
+- `gui/`: PySide6 widgets that act as a client of the workflow services
+- `camera/`: USB, video file, RTSP, and future industrial camera source boundaries
+- `dataset/`: human-in-the-loop dataset collection, label stats, and export tools
 - `config/`: tolerances and application settings
 - `outputs/`: generated inspection artifacts and logs
 - `storage/`: PostgreSQL schema, serial generation, persistence, and retrieval services
@@ -47,20 +67,104 @@ pytest
 ## Current workflow
 
 1. Start a new part.
-2. Upload the Station 1 top-side image and run inspection.
-3. If Station 1 fails, request the Station 1 reject actuator and skip Station 2.
-4. If Station 1 passes, release the part toward the mechanical flipper.
-5. Upload the Station 2 flipped-side image and run inspection.
-6. If Station 2 fails, request the Station 2 reject actuator; otherwise release the part to the good-product path.
-7. Show both live-feed panes, captured overlays, per-station measurements, PLC action, and final disposition.
+2. Upload an inspection image or video.
+3. Inspect the disc at the single station.
+4. If the part fails, pulse the reject actuator.
+5. If the part passes, release it to the good-product path.
+6. Show live feed, captured overlay, measurements, defect list, PLC action, and final disposition.
 
 ## Future extension points
 
 - Replace manual uploads with USB or GigE SDK adapters implementing `IndustrialCamera`.
-- Feed both camera streams into worker threads and trigger capture from conveyor sensors.
+- Feed the camera stream into a worker thread and trigger capture from conveyor sensors.
 - Replace `SimulatedPLCController` with the actual PLC adapter for reject outputs, conveyor release, and line interlocks.
-- Add part tracking between stations so the same product identity follows the flip stage.
+- Add a second station controller, panel, and table/view layer when the two-stage inspection system is ready.
 - Persist labeled inspection crops for future anomaly-detection training.
+
+## Data collection mode
+
+`DISK_VISION_MODE` defaults to `DATA_COLLECTION`. After each inspection the
+operator can confirm the system prediction or override it. The operator label is
+treated as ground truth.
+
+Saved dataset structure:
+
+```text
+dataset/
+  good/station1/full/
+  good/station1/roi/
+  good/station1/overlay/
+  defect/station1/full/
+  defect/station1/roi/
+  defect/station1/overlay/
+  metadata/
+```
+
+Station 2 folders are also created for future expansion.
+
+## Network API
+
+Headless mode exposes:
+
+- `GET /api/status`
+- `GET /api/cameras`
+- `GET /api/inspection/latest`
+- `GET /api/station1`
+- `GET /api/station2`
+- `GET /api/metrics`
+- `GET /api/dataset/stats`
+- `GET /api/history`
+- `GET /api/logs`
+- `POST /api/label`
+- `POST /api/operator-label`
+- `POST /api/upload`
+- `POST /api/start-part`
+- `POST /api/start-inspection`
+- `POST /api/stop-inspection`
+- `POST /api/reset-part`
+- `POST /api/reset`
+- `POST /api/shutdown`
+- `GET /stream/station1`
+- `GET /stream/station2`
+- `GET /image/station1/overlay`
+- `GET /image/station2/overlay`
+- `WebSocket /ws/logs`
+
+## Web dashboard development
+
+```powershell
+cd web
+npm install
+npm run dev
+```
+
+For production serving through FastAPI:
+
+```powershell
+python main.py --web
+```
+
+`--web` starts the FastAPI backend and serves the React dashboard with one
+command. If `web/dist` is missing, it automatically runs `npm install` if needed
+and `npm run build` before starting the server.
+
+## Dataset export
+
+```powershell
+python -c "from dataset.exporter import DatasetExporter; print(DatasetExporter().export_generic())"
+```
+
+This writes `dataset_export/images`, `dataset_export/labels`,
+`dataset_export/metadata`, and `dataset_export/metadata.csv`.
+
+## Docker
+
+```powershell
+docker compose up --build
+```
+
+The service exposes the dashboard on port `8000` and keeps `dataset/`,
+`dataset_export/`, and `outputs/` mounted from the project directory.
 
 ## PostgreSQL persistence
 
@@ -83,18 +187,17 @@ $env:DISK_VISION_POSTGRES_DSN = "dbname=diskvision user=postgres password=YOUR_P
 python main.py
 ```
 
-Each completed stage receives a serial such as:
+Each completed inspection receives a serial such as:
 
 ```text
-S1-20260517-143522-000001
-S2-20260517-143541-000001
+SINGLE-20260517-143522-000001
 ```
 
 Stored data includes:
 
 - physical part id
-- stage
-- stage serial number
+- station code
+- inspection serial number
 - inspection timestamp
 - decision
 - final disposition
@@ -109,10 +212,3 @@ Retrieval helpers are available from `InspectionStorageService`:
 - `recent(limit)`
 - `for_part(physical_part_id)`
 - `for_stage(stage, limit)`
-
-
-cd C:\Users\DELL\Documents\AI_Projects\DiskVisionInspector
-
-(Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned) ; (& c:\Users\DELL\Documents\AI_Projects\DiskVisionInspector\.venv\Scripts\Activate.ps1)
-
-python main.py 

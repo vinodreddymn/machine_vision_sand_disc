@@ -76,4 +76,4 @@ class ResultPanel(QWidget):
         self.style().unpolish(self.status_label)
         self.style().polish(self.status_label)
         self.defect_list.clear()
-        self.defect_list.addItem("Skipped after Station 1 reject.")
+        self.defect_list.addItem("Inspection skipped.")

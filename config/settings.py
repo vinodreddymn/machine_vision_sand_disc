@@ -10,11 +10,27 @@ from typing import Any
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 CONFIG_DIR = PROJECT_ROOT / "config"
 OUTPUT_DIR = PROJECT_ROOT / "outputs"
+DATASET_DIR = PROJECT_ROOT / "dataset"
+DATASET_EXPORT_DIR = PROJECT_ROOT / "dataset_export"
 LOG_DIR = OUTPUT_DIR / "logs"
 STORAGE_DIR = PROJECT_ROOT / "storage"
 STORAGE_ENV_FILE = STORAGE_DIR / ".env"
 TOLERANCES_FILE = CONFIG_DIR / "tolerances.json"
-KIOSK_MODE = True  # Set to True to enable kiosk mode (full-screen, no cursor)
+KIOSK_MODE = False  # Set to True to enable kiosk mode (full-screen, no cursor)
+
+MODE_RULE_BASED = "RULE_BASED"
+MODE_DATA_COLLECTION = "DATA_COLLECTION"
+MODE_AI_ASSIST = "AI_ASSIST"
+MODE_PRODUCTION = "PRODUCTION"
+SUPPORTED_INSPECTION_MODES = {
+    MODE_RULE_BASED,
+    MODE_DATA_COLLECTION,
+    MODE_AI_ASSIST,
+    MODE_PRODUCTION,
+}
+INSPECTION_MODE = os.getenv("DISK_VISION_MODE", MODE_DATA_COLLECTION)
+API_HOST = os.getenv("DISK_VISION_API_HOST", "0.0.0.0")
+API_PORT = int(os.getenv("DISK_VISION_API_PORT", "8000"))
 
 
 def _load_env_file(path: Path) -> dict[str, str]:
@@ -45,3 +61,9 @@ def load_tolerances() -> dict[str, Any]:
     """Load inspection tolerances from JSON for easy shop-floor tuning."""
     with TOLERANCES_FILE.open("r", encoding="utf-8") as file:
         return json.load(file)
+
+
+def save_tolerances(tolerances: dict[str, Any]) -> None:
+    """Save modified inspection tolerances back to JSON config file."""
+    with TOLERANCES_FILE.open("w", encoding="utf-8") as file:
+        json.dump(tolerances, file, indent=2)

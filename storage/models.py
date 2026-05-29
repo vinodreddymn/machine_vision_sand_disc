@@ -23,3 +23,6 @@ class StoredInspection:
     measurements: dict[str, Any]
     defects: list[str]
     overlay_path: str | None
+    inspection_mode: str = "PRODUCTION"
+    cycle_time_ms: int | None = None
+

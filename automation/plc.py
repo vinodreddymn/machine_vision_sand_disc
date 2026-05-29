@@ -32,25 +32,24 @@ class PLCStatus:
     run_status: DeviceState = DeviceState.RUNNING
     mode: PLCMode = PLCMode.MANUAL
     conveyor_status: DeviceState = DeviceState.RUNNING
-    station_1_reject_actuator: DeviceState = DeviceState.IDLE
-    flipper_status: DeviceState = DeviceState.READY
-    station_2_reject_actuator: DeviceState = DeviceState.IDLE
+    reject_actuator: DeviceState = DeviceState.IDLE
+    accept_gate: DeviceState = DeviceState.READY
 
 
 class PLCController(ABC):
-    """Minimal PLC contract needed by the two-station line workflow."""
+    """Minimal PLC contract needed by the single-station line workflow."""
 
     @abstractmethod
     def reject_part(self, station_name: str) -> None:
-        """Pulse the reject actuator associated with one station."""
+        """Pulse the station reject actuator."""
 
     @abstractmethod
     def release_to_flipper(self) -> None:
-        """Allow a station-one pass part to continue toward the flipper."""
+        """Compatibility alias for older two-stage callers."""
 
     @abstractmethod
     def release_to_good_bin(self) -> None:
-        """Allow a station-two pass part to continue as an accepted product."""
+        """Allow a pass part to continue as an accepted product."""
 
     @abstractmethod
     def read_status(self) -> PLCStatus:
@@ -70,26 +69,21 @@ class SimulatedPLCController(PLCController):
     def reject_part(self, station_name: str) -> None:
         # Record the reject request and pulse the actuator (ACTIVE then IDLE)
         self.reject_requests.append(station_name)
-        self.last_action = f"{station_name} reject actuator fired"
-        if station_name == "Station 1":
-            self.status.station_1_reject_actuator = DeviceState.ACTIVE
-            # Simulate a short pulse by releasing immediately in the simulated controller
-            self.status.station_1_reject_actuator = DeviceState.IDLE
-        else:
-            self.status.station_2_reject_actuator = DeviceState.ACTIVE
-            # Simulate a short pulse by releasing immediately in the simulated controller
-            self.status.station_2_reject_actuator = DeviceState.IDLE
-            self.status.flipper_status = DeviceState.READY
+        self.last_action = "Reject actuator fired"
+        self.status.reject_actuator = DeviceState.ACTIVE
+        # Simulate a short pulse by releasing immediately in the simulated controller.
+        self.status.reject_actuator = DeviceState.IDLE
+        self.status.accept_gate = DeviceState.READY
 
     def release_to_flipper(self) -> None:
         self.transfer_released = True
-        self.last_action = "Released to mechanical flipper"
-        self.status.flipper_status = DeviceState.ACTIVE
+        self.release_to_good_bin()
 
     def release_to_good_bin(self) -> None:
         self.good_bin_released = True
         self.last_action = "Released to good-product path"
-        self.status.flipper_status = DeviceState.READY
+        self.status.accept_gate = DeviceState.ACTIVE
+        self.status.accept_gate = DeviceState.READY
 
     def read_status(self) -> PLCStatus:
         """Return the current simulated PLC state."""
@@ -101,6 +95,5 @@ class SimulatedPLCController(PLCController):
         self.transfer_released = False
         self.good_bin_released = False
         self.last_action = "Idle"
-        self.status.station_1_reject_actuator = DeviceState.IDLE
-        self.status.station_2_reject_actuator = DeviceState.IDLE
-        self.status.flipper_status = DeviceState.READY
+        self.status.reject_actuator = DeviceState.IDLE
+        self.status.accept_gate = DeviceState.READY

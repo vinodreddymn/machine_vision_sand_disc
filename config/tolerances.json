@@ -11,7 +11,7 @@
   "hole_circularity_min": 0.78,
   "hole_position": {
     "radial_tolerance_ratio": 0.18,
-    "angular_spacing_tolerance_deg": 18.0,
+    "angular_spacing_tolerance_deg": 18,
     "max_pattern_circle_residual_ratio": 0.035,
     "min_pattern_ellipse_axis_ratio": 0.92
   },

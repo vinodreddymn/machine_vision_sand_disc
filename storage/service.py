@@ -50,6 +50,8 @@ class InspectionStorageService:
         final_disposition: FinalDisposition,
         overlay_path: str | None,
         inspected_at: datetime | None = None,
+        inspection_mode: str = "PRODUCTION",
+        cycle_time_ms: int | None = None,
     ) -> str:
         """Assign a stage serial and save one completed inspection."""
         if record.inspection_result is None:
@@ -70,6 +72,8 @@ class InspectionStorageService:
             measurements=record.inspection_result.measurements,
             defects=record.inspection_result.defects,
             overlay_path=overlay_path,
+            inspection_mode=inspection_mode,
+            cycle_time_ms=cycle_time_ms,
         )
         record.serial_number = serial_number
         record.inspected_at = inspected_at
