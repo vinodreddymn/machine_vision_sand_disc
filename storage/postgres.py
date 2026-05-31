@@ -131,6 +131,105 @@ CREATE TABLE IF NOT EXISTS public.camera_calibration (
 
 CREATE INDEX IF NOT EXISTS idx_camera_calibration_active
     ON public.camera_calibration (camera_id, active);
+
+CREATE TABLE IF NOT EXISTS system_alarms (
+    id BIGSERIAL PRIMARY KEY,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    category TEXT NOT NULL,
+    severity TEXT NOT NULL,
+    message TEXT NOT NULL,
+    source TEXT NOT NULL,
+    acknowledged BOOLEAN NOT NULL DEFAULT FALSE,
+    acknowledged_at TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_system_alarms_created_at
+    ON system_alarms (created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_system_alarms_ack
+    ON system_alarms (acknowledged, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS system_health_history (
+    id BIGSERIAL PRIMARY KEY,
+    captured_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    cpu_usage_percent DOUBLE PRECISION,
+    memory_usage_percent DOUBLE PRECISION,
+    cpu_temperature_c DOUBLE PRECISION,
+    disk_usage_percent DOUBLE PRECISION,
+    free_disk_gb DOUBLE PRECISION,
+    inspection_fps DOUBLE PRECISION,
+    parts_per_minute DOUBLE PRECISION,
+    avg_cycle_time_ms DOUBLE PRECISION,
+    network_online BOOLEAN,
+    camera_online BOOLEAN,
+    plc_online BOOLEAN,
+    database_online BOOLEAN
+);
+
+CREATE INDEX IF NOT EXISTS idx_system_health_history_time
+    ON system_health_history (captured_at DESC);
+
+CREATE TABLE IF NOT EXISTS service_events (
+    id BIGSERIAL PRIMARY KEY,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    service_name TEXT NOT NULL,
+    event_type TEXT NOT NULL,
+    message TEXT NOT NULL,
+    details JSONB
+);
+
+CREATE INDEX IF NOT EXISTS idx_service_events_time
+    ON service_events (created_at DESC);
+
+CREATE TABLE IF NOT EXISTS camera_events (
+    id BIGSERIAL PRIMARY KEY,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    camera_name TEXT NOT NULL,
+    event_type TEXT NOT NULL,
+    message TEXT NOT NULL,
+    details JSONB
+);
+
+CREATE INDEX IF NOT EXISTS idx_camera_events_time
+    ON camera_events (created_at DESC);
+
+CREATE TABLE IF NOT EXISTS production_stats (
+    id BIGSERIAL PRIMARY KEY,
+    captured_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    stage TEXT NOT NULL DEFAULT 'S1',
+    total_parts BIGINT NOT NULL,
+    passed_parts BIGINT NOT NULL,
+    rejected_parts BIGINT NOT NULL,
+    yield_percent DOUBLE PRECISION NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_production_stats_time
+    ON production_stats (captured_at DESC);
+
+CREATE TABLE IF NOT EXISTS audit_logs (
+    id BIGSERIAL PRIMARY KEY,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    actor TEXT,
+    action TEXT NOT NULL,
+    resource TEXT,
+    message TEXT NOT NULL,
+    details JSONB
+);
+
+CREATE INDEX IF NOT EXISTS idx_audit_logs_time
+    ON audit_logs (created_at DESC);
+
+CREATE TABLE IF NOT EXISTS app_users (
+    id BIGSERIAL PRIMARY KEY,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    username TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    role TEXT NOT NULL DEFAULT 'OPERATOR',
+    active BOOLEAN NOT NULL DEFAULT TRUE
+);
+
+CREATE INDEX IF NOT EXISTS idx_app_users_active
+    ON app_users (active, username);
 """
 
 
@@ -361,3 +460,183 @@ class PostgresInspectionRepository:
                 )
                 return cursor.fetchall()
 
+    def save_alarm(
+        self,
+        *,
+        category: str,
+        severity: str,
+        message: str,
+        source: str,
+        acknowledged: bool = False,
+    ) -> int:
+        with self._connect() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    INSERT INTO system_alarms (category, severity, message, source, acknowledged)
+                    VALUES (%s, %s, %s, %s, %s)
+                    RETURNING id
+                    """,
+                    (category, severity, message, source, acknowledged),
+                )
+                return int(cursor.fetchone()[0])
+
+    def list_alarms(self, *, active_only: bool = False, limit: int = 100) -> list[dict[str, Any]]:
+        where_clause = "WHERE acknowledged = FALSE" if active_only else ""
+        with self._connect(row_factory=dict_row) as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    f"""
+                    SELECT id, created_at, category, severity, message, source, acknowledged, acknowledged_at
+                    FROM system_alarms
+                    {where_clause}
+                    ORDER BY created_at DESC, id DESC
+                    LIMIT %s
+                    """,
+                    (limit,),
+                )
+                return cursor.fetchall()
+
+    def acknowledge_alarm(self, alarm_id: int) -> bool:
+        with self._connect() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    UPDATE system_alarms
+                    SET acknowledged = TRUE, acknowledged_at = now()
+                    WHERE id = %s
+                    """,
+                    (alarm_id,),
+                )
+                return cursor.rowcount > 0
+
+    def save_health_snapshot(self, snapshot: dict[str, Any]) -> int:
+        with self._connect() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    INSERT INTO system_health_history (
+                        cpu_usage_percent,
+                        memory_usage_percent,
+                        cpu_temperature_c,
+                        disk_usage_percent,
+                        free_disk_gb,
+                        inspection_fps,
+                        parts_per_minute,
+                        avg_cycle_time_ms,
+                        network_online,
+                        camera_online,
+                        plc_online,
+                        database_online
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    RETURNING id
+                    """,
+                    (
+                        snapshot.get("cpu_usage"),
+                        snapshot.get("memory_usage"),
+                        snapshot.get("temperature"),
+                        snapshot.get("disk_usage"),
+                        snapshot.get("free_disk_gb"),
+                        snapshot.get("inspection_fps"),
+                        snapshot.get("parts_per_minute"),
+                        snapshot.get("average_cycle_time_ms"),
+                        snapshot.get("network_online"),
+                        snapshot.get("camera_online"),
+                        snapshot.get("plc_online"),
+                        snapshot.get("database_online"),
+                    ),
+                )
+                return int(cursor.fetchone()[0])
+
+    def get_health_history(self, *, hours: int = 24, limit: int = 500) -> list[dict[str, Any]]:
+        with self._connect(row_factory=dict_row) as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT id, captured_at, cpu_usage_percent, memory_usage_percent, cpu_temperature_c,
+                           disk_usage_percent, free_disk_gb, inspection_fps, parts_per_minute,
+                           avg_cycle_time_ms, network_online, camera_online, plc_online, database_online
+                    FROM system_health_history
+                    WHERE captured_at >= now() - make_interval(hours => %s)
+                    ORDER BY captured_at DESC
+                    LIMIT %s
+                    """,
+                    (hours, limit),
+                )
+                return cursor.fetchall()
+
+    def prune_health_history(self, *, days: int = 30) -> int:
+        with self._connect() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    DELETE FROM system_health_history
+                    WHERE captured_at < now() - make_interval(days => %s)
+                    """,
+                    (days,),
+                )
+                return cursor.rowcount
+
+    def database_size_bytes(self) -> int:
+        with self._connect() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT pg_database_size(current_database())")
+                value = cursor.fetchone()
+                return int(value[0]) if value else 0
+
+    def health_query(self) -> bool:
+        with self._connect() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT 1")
+                value = cursor.fetchone()
+                return bool(value and value[0] == 1)
+
+    def get_user_by_username(self, username: str) -> dict[str, Any] | None:
+        with self._connect(row_factory=dict_row) as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT id, username, password_hash, role, active, created_at
+                    FROM app_users
+                    WHERE username = %s
+                    LIMIT 1
+                    """,
+                    (username,),
+                )
+                return cursor.fetchone()
+
+    def create_user(self, *, username: str, password_hash: str, role: str) -> int:
+        with self._connect() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    INSERT INTO app_users (username, password_hash, role, active)
+                    VALUES (%s, %s, %s, TRUE)
+                    RETURNING id
+                    """,
+                    (username, password_hash, role),
+                )
+                return int(cursor.fetchone()[0])
+
+    def ensure_default_admin(self, *, username: str, password_hash: str) -> int | None:
+        existing = self.get_user_by_username(username)
+        if existing:
+            return int(existing["id"])
+        try:
+            return self.create_user(username=username, password_hash=password_hash, role="ADMIN")
+        except Exception:
+            return None
+
+    def write_audit_log(self, *, actor: str | None, action: str, resource: str | None, message: str, details: dict[str, Any] | None) -> int:
+        with self._connect() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    INSERT INTO audit_logs (actor, action, resource, message, details)
+                    VALUES (%s, %s, %s, %s, %s)
+                    RETURNING id
+                    """,
+                    (actor, action, resource, message, Jsonb(details or {})),
+                )
+                return int(cursor.fetchone()[0])

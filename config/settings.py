@@ -16,6 +16,9 @@ LOG_DIR = OUTPUT_DIR / "logs"
 STORAGE_DIR = PROJECT_ROOT / "storage"
 STORAGE_ENV_FILE = STORAGE_DIR / ".env"
 TOLERANCES_FILE = CONFIG_DIR / "tolerances.json"
+HEALTH_THRESHOLDS_FILE = CONFIG_DIR / "health_thresholds.json"
+IMAGE_RETENTION_FILE = CONFIG_DIR / "image_retention.json"
+SECURITY_FILE = CONFIG_DIR / "security.json"
 KIOSK_MODE = False  # Set to True to enable kiosk mode (full-screen, no cursor)
 
 MODE_RULE_BASED = "RULE_BASED"
@@ -30,7 +33,7 @@ SUPPORTED_INSPECTION_MODES = {
 }
 INSPECTION_MODE = os.getenv("DISK_VISION_MODE", MODE_DATA_COLLECTION)
 API_HOST = os.getenv("DISK_VISION_API_HOST", "0.0.0.0")
-API_PORT = int(os.getenv("DISK_VISION_API_PORT", "8000"))
+API_PORT = int(os.getenv("DISK_VISION_API_PORT", "8010"))
 
 
 def _load_env_file(path: Path) -> dict[str, str]:
@@ -67,3 +70,21 @@ def save_tolerances(tolerances: dict[str, Any]) -> None:
     """Save modified inspection tolerances back to JSON config file."""
     with TOLERANCES_FILE.open("w", encoding="utf-8") as file:
         json.dump(tolerances, file, indent=2)
+
+
+def load_health_thresholds() -> dict[str, Any]:
+    """Load health monitoring thresholds from JSON config."""
+    with HEALTH_THRESHOLDS_FILE.open("r", encoding="utf-8") as file:
+        return json.load(file)
+
+
+def load_image_retention() -> dict[str, Any]:
+    """Load image/log retention policy from JSON config."""
+    with IMAGE_RETENTION_FILE.open("r", encoding="utf-8") as file:
+        return json.load(file)
+
+
+def load_security_config() -> dict[str, Any]:
+    """Load security/auth settings from JSON config."""
+    with SECURITY_FILE.open("r", encoding="utf-8") as file:
+        return json.load(file)

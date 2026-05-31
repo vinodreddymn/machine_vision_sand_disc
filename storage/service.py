@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Protocol
+from typing import Any, Protocol
 
 from automation.workflow import FinalDisposition, StationRecord
 from storage.models import StoredInspection
@@ -29,6 +29,18 @@ class InspectionRepository(Protocol):
     def get_active_calibration(self, camera_id: str) -> dict | None: ...
     
     def save_calibration(self, camera_id: str, mm_per_pixel: float, reference_od_mm: float, reference_hole_mm: float) -> int: ...
+    def save_alarm(self, *, category: str, severity: str, message: str, source: str, acknowledged: bool = False) -> int: ...
+    def list_alarms(self, *, active_only: bool = False, limit: int = 100) -> list[dict]: ...
+    def acknowledge_alarm(self, alarm_id: int) -> bool: ...
+    def save_health_snapshot(self, snapshot: dict[str, Any]) -> int: ...
+    def get_health_history(self, *, hours: int = 24, limit: int = 500) -> list[dict]: ...
+    def prune_health_history(self, *, days: int = 30) -> int: ...
+    def database_size_bytes(self) -> int: ...
+    def health_query(self) -> bool: ...
+    def get_user_by_username(self, username: str) -> dict | None: ...
+    def create_user(self, *, username: str, password_hash: str, role: str) -> int: ...
+    def ensure_default_admin(self, *, username: str, password_hash: str) -> int | None: ...
+    def write_audit_log(self, *, actor: str | None, action: str, resource: str | None, message: str, details: dict[str, Any] | None) -> int: ...
 
 
 class InspectionStorageService:
@@ -98,3 +110,61 @@ class InspectionStorageService:
     def get_active_calibration(self, camera_id: str) -> dict | None:
         """Return the active camera calibration."""
         return self.repository.get_active_calibration(camera_id)
+
+    def save_alarm(
+        self,
+        *,
+        category: str,
+        severity: str,
+        message: str,
+        source: str,
+        acknowledged: bool = False,
+    ) -> int:
+        return self.repository.save_alarm(
+            category=category,
+            severity=severity,
+            message=message,
+            source=source,
+            acknowledged=acknowledged,
+        )
+
+    def list_alarms(self, *, active_only: bool = False, limit: int = 100) -> list[dict]:
+        return self.repository.list_alarms(active_only=active_only, limit=limit)
+
+    def acknowledge_alarm(self, alarm_id: int) -> bool:
+        return self.repository.acknowledge_alarm(alarm_id)
+
+    def save_health_snapshot(self, snapshot: dict[str, Any]) -> int:
+        return self.repository.save_health_snapshot(snapshot)
+
+    def get_health_history(self, *, hours: int = 24, limit: int = 500) -> list[dict]:
+        return self.repository.get_health_history(hours=hours, limit=limit)
+
+    def prune_health_history(self, *, days: int = 30) -> int:
+        return self.repository.prune_health_history(days=days)
+
+    def database_size_bytes(self) -> int:
+        return self.repository.database_size_bytes()
+
+    def health_query(self) -> bool:
+        return self.repository.health_query()
+
+    def get_user_by_username(self, username: str) -> dict | None:
+        return self.repository.get_user_by_username(username)
+
+    def create_user(self, *, username: str, password_hash: str, role: str) -> int:
+        return self.repository.create_user(username=username, password_hash=password_hash, role=role)
+
+    def ensure_default_admin(self, *, username: str, password_hash: str) -> int | None:
+        return self.repository.ensure_default_admin(username=username, password_hash=password_hash)
+
+    def write_audit_log(
+        self,
+        *,
+        actor: str | None,
+        action: str,
+        resource: str | None,
+        message: str,
+        details: dict[str, Any] | None,
+    ) -> int:
+        return self.repository.write_audit_log(actor=actor, action=action, resource=resource, message=message, details=details)

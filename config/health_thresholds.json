@@ -1,0 +1,15 @@
+{
+  "cpu_temp_warning": 75,
+  "cpu_temp_critical": 80,
+  "cpu_temp_emergency": 85,
+  "disk_warning_percent": 80,
+  "disk_critical_percent": 90,
+  "memory_warning_percent": 80,
+  "memory_critical_percent": 90,
+  "camera_no_frame_seconds": 5,
+  "camera_max_recovery_retries": 3,
+  "disk_free_warning_gb": 10,
+  "disk_free_critical_gb": 5,
+  "disk_free_emergency_gb": 1,
+  "database_reconnect_seconds": 30
+}

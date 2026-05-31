@@ -1,0 +1,10 @@
+{
+  "enabled": true,
+  "passed_images_days": 30,
+  "failed_images_days": 365,
+  "logs_days": 30,
+  "archive_enabled": true,
+  "archive_dir": "outputs/archive",
+  "archive_min_age_days": 7
+}
+

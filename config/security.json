@@ -1,0 +1,9 @@
+{
+  "auth_enabled": false,
+  "jwt_secret_env": "DISK_VISION_JWT_SECRET",
+  "jwt_issuer": "diskvision",
+  "jwt_exp_minutes": 720,
+  "rate_limit_enabled": false,
+  "rate_limit_per_minute": 120
+}
+

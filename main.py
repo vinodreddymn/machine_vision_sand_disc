@@ -6,6 +6,7 @@ import sys
 import argparse
 import subprocess
 import socket
+import os
 from pathlib import Path
 
 from config.settings import API_HOST, API_PORT
@@ -46,16 +47,52 @@ def run_web() -> int:
 
 
 def _ensure_web_dashboard_built() -> None:
-    """Build the React dashboard when the production bundle is missing."""
-    if WEB_DIST.exists():
-        return
+    """Build the React dashboard when missing or stale.
+
+    Set DISK_VISION_FORCE_WEB_BUILD=1 to always rebuild.
+    Set DISK_VISION_SKIP_WEB_BUILD=1 to skip build checks.
+    """
     if not WEB_DIR.exists():
         return
+    if os.getenv("DISK_VISION_SKIP_WEB_BUILD", "0") == "1":
+        return
+    if os.getenv("DISK_VISION_FORCE_WEB_BUILD", "0") == "1":
+        _build_web_dashboard()
+        return
+    if WEB_DIST.exists() and not _web_sources_newer_than_dist():
+        return
+    _build_web_dashboard()
+
+
+def _build_web_dashboard() -> None:
+    """Execute npm install/build for the dashboard."""
     npm_command = "npm.cmd" if sys.platform.startswith("win") else "npm"
     node_modules = WEB_DIR / "node_modules"
     if not node_modules.exists():
         subprocess.run([npm_command, "install"], cwd=WEB_DIR, check=True)
     subprocess.run([npm_command, "run", "build"], cwd=WEB_DIR, check=True)
+
+
+def _web_sources_newer_than_dist() -> bool:
+    """Return True when web source/config files changed after the built bundle."""
+    if not WEB_DIST.exists():
+        return True
+    dist_mtime = WEB_DIST.stat().st_mtime
+    watch_roots = [WEB_DIR / "src"]
+    watch_files = [WEB_DIR / "index.html", WEB_DIR / "package.json", WEB_DIR / "tsconfig.json", WEB_DIR / "vite.config.ts"]
+
+    for root in watch_roots:
+        if not root.exists():
+            continue
+        for path in root.rglob("*"):
+            if path.is_file() and path.stat().st_mtime > dist_mtime:
+                return True
+
+    for path in watch_files:
+        if path.exists() and path.stat().st_mtime > dist_mtime:
+            return True
+
+    return False
 
 
 def _choose_port(host: str, preferred_port: int, max_tries: int = 20) -> int:

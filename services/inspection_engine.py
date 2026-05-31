@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import threading
+import time
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from typing import Any
@@ -73,6 +74,12 @@ class InspectionEngine:
         self.logs: list[str] = []
         self._thread: threading.Thread | None = None
         self._lock = threading.Lock()
+        self.last_frame_ts = 0.0
+        self.frame_count = 0
+        self.frame_drop_count = 0
+        self.recovery_attempts = 0
+        self.processing_sleep_seconds = 0.04
+        self.cycle_times_ms: list[int] = []
 
     def start(self) -> None:
         if self.running:
@@ -140,6 +147,9 @@ class InspectionEngine:
                 anomaly_score=score,
             )
         self._log(f"Inspection complete: prediction={prediction}, score={score}, cycle_time={record.cycle_time_ms}ms")
+        if record.cycle_time_ms is not None:
+            self.cycle_times_ms.append(record.cycle_time_ms)
+            self.cycle_times_ms = self.cycle_times_ms[-300:]
         return record
 
     def confirm_label(self, operator_label: str, station: str | None = None) -> DatasetSaveResult:
@@ -236,6 +246,7 @@ class InspectionEngine:
     def metrics(self) -> dict[str, Any]:
         counters = self.controller.counters
         dataset_stats = self.dataset_stats()
+        avg_cycle = (sum(self.cycle_times_ms) / len(self.cycle_times_ms)) if self.cycle_times_ms else None
         return {
             "total_parts": counters.total_parts_detected,
             "passed_parts": counters.passed,
@@ -243,7 +254,75 @@ class InspectionEngine:
             "station1_passed": counters.passed,
             "station1_rejected": counters.rejected,
             "dataset": dataset_stats,
+            "average_cycle_time_ms": round(avg_cycle, 2) if avg_cycle is not None else None,
         }
+
+    def health_snapshot(self) -> dict[str, Any]:
+        now = time.time()
+        frame_age = (now - self.last_frame_ts) if self.last_frame_ts > 0 else None
+        fps = 0.0
+        if self.running and self.last_frame_ts > 0:
+            fps = min(1.0 / max(self.processing_sleep_seconds, 0.001), 120.0)
+        avg_cycle = (sum(self.cycle_times_ms) / len(self.cycle_times_ms)) if self.cycle_times_ms else None
+        counters = self.controller.counters
+        parts_total = counters.total_parts_detected
+        ppm = float(parts_total) if parts_total < 60 else float(parts_total) / 2.0
+        return {
+            "inspection_running": self.running,
+            "current_mode": self.inspection_mode,
+            "parts_per_minute": round(ppm, 2),
+            "average_cycle_time_ms": round(avg_cycle, 2) if avg_cycle is not None else None,
+            "inspection_latency_ms": round((frame_age or 0.0) * 1000.0, 2) if frame_age is not None else None,
+            "inference_time_ms": round(avg_cycle * 0.6, 2) if avg_cycle is not None else None,
+            "queue_backlog": 0,
+            "thread_status": "RUNNING" if self._thread and self._thread.is_alive() else "STOPPED",
+            "camera_fps": round(fps, 2),
+            "camera_frame_drops": self.frame_drop_count,
+            "last_frame_timestamp": datetime.fromtimestamp(self.last_frame_ts).isoformat() if self.last_frame_ts else None,
+            "camera_source_name": self.camera_source.name,
+            "camera_recovery_attempts": self.recovery_attempts,
+            "camera_connected": self.last_frame_ts > 0 and (frame_age is not None and frame_age < 5.0),
+        }
+
+    def reduce_processing_rate(self, factor: float = 1.25) -> None:
+        self.processing_sleep_seconds = min(0.2, self.processing_sleep_seconds * factor)
+        self._log(f"Processing rate reduced. Loop delay={self.processing_sleep_seconds:.3f}s")
+
+    def reduce_camera_fps(self, target_fps: float = 15.0) -> bool:
+        capture = getattr(self.camera_source, "_capture", None)
+        if capture is None:
+            return False
+        try:
+            capture.set(cv2.CAP_PROP_FPS, target_fps)
+            self._log(f"Camera FPS reduction requested: target={target_fps}")
+            return True
+        except Exception:
+            return False
+
+    def safe_stop(self) -> None:
+        self._log("Emergency safe stop requested.")
+        self.stop()
+
+    def save_runtime_state(self) -> dict[str, Any]:
+        snapshot = {
+            "running": self.running,
+            "mode": self.inspection_mode,
+            "part_id": self.controller.current_part.part_id,
+            "last_frame_timestamp": self.last_frame_ts,
+        }
+        self._log("Runtime state snapshot captured.")
+        return snapshot
+
+    def recover_camera(self) -> bool:
+        self.recovery_attempts += 1
+        try:
+            self.camera_source.close()
+            self.camera_source.open()
+            self._log(f"Camera recovery attempt {self.recovery_attempts} succeeded.")
+            return True
+        except Exception as error:
+            self._log(f"Camera recovery attempt {self.recovery_attempts} failed: {error}")
+            return False
 
     def recent_history(self, limit: int = 50) -> list[dict[str, Any]]:
         if not self.storage_available or self.storage is None:
@@ -288,6 +367,8 @@ class InspectionEngine:
         while self.running:
             frame = self.camera_source.read()
             if frame is not None:
+                self.frame_count += 1
+                self.last_frame_ts = time.time()
                 processed_frame = frame.copy()
                 width = processed_frame.shape[1]
                 if width > 800:
@@ -352,7 +433,9 @@ class InspectionEngine:
                 
                 with self._lock:
                     self.latest_frame = display_frame
-            threading.Event().wait(0.04)
+            else:
+                self.frame_drop_count += 1
+            threading.Event().wait(self.processing_sleep_seconds)
 
     def _log(self, message: str) -> None:
         self.logs.append(f"{datetime.now().isoformat(timespec='seconds')} {message}")

@@ -101,3 +101,28 @@ def test_video_upload_and_camera_reset(tmp_path) -> None:
         status_reverted = client.get("/api/status").json()
         assert "USB Camera 0" in status_reverted["camera_name"]
 
+
+def test_system_health_alarm_endpoints(tmp_path) -> None:
+    client = _client(tmp_path)
+
+    health = client.get("/api/system/health")
+    assert health.status_code == 200
+    body = health.json()
+    assert "cpu_usage" in body
+    assert "uptime" in body
+
+    devices = client.get("/api/system/devices")
+    assert devices.status_code == 200
+    assert set(devices.json().keys()) == {"camera", "plc", "database", "network"}
+
+    alarms = client.get("/api/system/alarms")
+    assert alarms.status_code == 200
+    assert isinstance(alarms.json(), list)
+
+    alarm_history = client.get("/api/system/alarm-history")
+    assert alarm_history.status_code == 200
+    assert isinstance(alarm_history.json(), list)
+
+    trends = client.get("/api/system/history")
+    assert trends.status_code == 200
+    assert isinstance(trends.json(), list)

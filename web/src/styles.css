@@ -322,38 +322,62 @@ input {
   min-height: 100vh;
   background: #0f1219;
 }
-
 .sidebar {
-  width: 250px;
-  background: #151821;
-  border-right: 1px solid #232a36;
+  width: 260px;
+  height: 100vh;
+  background: #111827;
+  color: white;
   display: flex;
   flex-direction: column;
-  padding: 16px;
-  flex-shrink: 0;
+  transition: width 0.3s ease;
+  border-right: 1px solid #1f2937;
+}
+
+.sidebar.collapsed {
+  width: 78px;
+}
+
+.sidebar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 14px;
+  border-bottom: 1px solid #1f2937;
 }
 
 .sidebar-logo {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 8px 12px;
-  margin-bottom: 24px;
 }
 
-.sidebar-logo svg {
-  color: #38bdf8;
-}
-
-.sidebar-logo h1 {
-  font-size: 16px;
+.sidebar-brand h1 {
   margin: 0;
-  font-weight: 800;
-  color: #f8fafc;
-  letter-spacing: 0.5px;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.sidebar-brand span {
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+.collapse-btn {
+  background: transparent;
+  border: none;
+  color: white;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 8px;
+}
+
+.collapse-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .sidebar-nav {
+  flex: 1;
+  padding: 12px;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -362,30 +386,62 @@ input {
 .sidebar-button {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   padding: 12px 14px;
   border: none;
   background: transparent;
-  border-radius: 8px;
-  color: #94a3b8;
-  font-weight: 600;
-  font-size: 14px;
+  color: #d1d5db;
+  border-radius: 12px;
   cursor: pointer;
+  transition: all 0.25s ease;
   text-align: left;
-  transition: all 0.2s ease;
 }
 
 .sidebar-button:hover {
-  background: rgba(56, 189, 248, 0.08);
-  color: #f8fafc;
+  background: rgba(255, 255, 255, 0.08);
+  color: white;
 }
 
 .sidebar-button.active {
-  background: #38bdf8;
-  color: #0f1219;
-  box-shadow: 0 4px 12px rgba(56, 189, 248, 0.25);
+  background: linear-gradient(
+    135deg,
+    #2563eb,
+    #1d4ed8
+  );
+  color: white;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
 }
 
+.sidebar.collapsed .sidebar-button {
+  justify-content: center;
+  padding: 12px;
+}
+
+.sidebar-label {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.sidebar-footer {
+  padding: 16px;
+  border-top: 1px solid #1f2937;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #9ca3af;
+  font-size: 13px;
+}
+
+.status-indicator {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.status-indicator.online {
+  background: #22c55e;
+  box-shadow: 0 0 10px #22c55e;
+}
 .main-content {
   flex: 1;
   display: flex;
@@ -1293,4 +1349,107 @@ input {
   .cal-detect-grid { grid-template-columns: 1fr; }
 }
 
+.sys-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.sys-metric-card {
+  background: #1a1e28;
+  border: 1px solid #252d3d;
+  border-radius: 10px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sys-metric-card span {
+  font-size: 12px;
+  color: #94a3b8;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.sys-metric-card strong {
+  font-size: 22px;
+  color: #f8fafc;
+}
+
+.sys-badge-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.sys-status-badge {
+  border-radius: 10px;
+  border: 1px solid #2d3748;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sys-status-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.sys-status-badge strong {
+  font-size: 16px;
+}
+
+.sys-normal {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.5);
+  color: #34d399;
+}
+
+.sys-warning {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.5);
+  color: #fbbf24;
+}
+
+.sys-critical {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.5);
+  color: #f87171;
+}
+
+.sys-emergency {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: #ef4444;
+  color: #fecaca;
+  animation: emergencyPulse 0.8s linear infinite;
+}
+
+.sys-alarm-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: center;
+  border: 1px solid #2d3748;
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+
+.sys-alarm-info { background: rgba(16, 185, 129, 0.08); border-color: rgba(16, 185, 129, 0.4); }
+.sys-alarm-warning { background: rgba(245, 158, 11, 0.08); border-color: rgba(245, 158, 11, 0.4); }
+.sys-alarm-critical { background: rgba(239, 68, 68, 0.08); border-color: rgba(239, 68, 68, 0.4); }
+.sys-alarm-emergency { background: rgba(239, 68, 68, 0.16); border-color: #ef4444; animation: emergencyPulse 0.8s linear infinite; }
+
+@keyframes emergencyPulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.45; }
+  100% { opacity: 1; }
+}
 
