@@ -1,0 +1,369 @@
+/* Production Page Styles - Industry 4.0 Enhanced Dashboard */
+
+.production-page-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: linear-gradient(135deg, #0d1117 0%, #161b22 100%);
+  overflow: hidden;
+}
+
+/* Header Section */
+.production-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background: linear-gradient(90deg, #1f2937 0%, #111827 100%);
+  border-bottom: 2px solid #1f6feb;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.header-title {
+  flex: 1;
+}
+
+.header-title h1 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.header-title .subtitle {
+  margin: 4px 0 0 0;
+  font-size: 11px;
+  color: #8b949e;
+  letter-spacing: 0.5px;
+}
+
+.header-status {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.status-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: all 0.3s;
+}
+
+.status-badge.running {
+  background: rgba(63, 185, 80, 0.15);
+  color: #3fb950;
+  border: 1px solid #3fb950;
+}
+
+.status-badge.running svg {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.status-badge.stopped {
+  background: rgba(248, 81, 73, 0.15);
+  color: #f85149;
+  border: 1px solid #f85149;
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.status-mode {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(88, 166, 255, 0.1);
+  border: 1px solid #58a6ff;
+  border-radius: 6px;
+  font-size: 11px;
+}
+
+.mode-label {
+  color: #8b949e;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.mode-value {
+  color: #58a6ff;
+  font-weight: 700;
+  font-family: 'Monaco', 'Menlo', monospace;
+}
+
+/* Main Grid Layout */
+.production-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 16px;
+  padding: 16px;
+  flex: 1;
+  overflow: hidden;
+}
+
+.production-column-main {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow: hidden;
+}
+
+.production-column-side {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 4px;
+}
+
+.production-column-side::-webkit-scrollbar {
+  width: 6px;
+}
+
+.production-column-side::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.production-column-side::-webkit-scrollbar-thumb {
+  background: #404050;
+  border-radius: 3px;
+}
+
+.production-column-side::-webkit-scrollbar-thumb:hover {
+  background: #505060;
+}
+
+/* Camera Section */
+.camera-section {
+  flex: 1;
+  min-height: 350px;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  background: #0d1117;
+  border: 1px solid #404050;
+}
+
+/* KPI Section */
+.kpi-section {
+  padding: 0;
+}
+
+.section-title {
+  margin: 0 0 10px 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: #c9d1d9;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* Metrics Grid - Industry 4.0 */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+}
+
+.metric-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: linear-gradient(135deg, #1e1e2e 0%, #2d2d3d 100%);
+  border: 1px solid #404050;
+  border-radius: 6px;
+  transition: all 0.3s;
+}
+
+.metric-card:hover {
+  border-color: #58a6ff;
+  background: linear-gradient(135deg, #2d2d3d 0%, #3d3d4d 100%);
+  box-shadow: 0 4px 12px rgba(88, 166, 255, 0.1);
+}
+
+.metric-card.industry40 {
+  background: linear-gradient(135deg, #1a3a52 0%, #142838 100%);
+  border: 1px solid #1f6feb;
+}
+
+.metric-card.industry40:hover {
+  border-color: #58a6ff;
+  box-shadow: 0 4px 16px rgba(31, 110, 251, 0.15);
+}
+
+.metric-card.warning {
+  background: linear-gradient(135deg, #3d2625 0%, #2d1e1a 100%);
+  border: 1px solid #da3633;
+}
+
+.metric-card.warning:hover {
+  border-color: #f85149;
+  box-shadow: 0 4px 16px rgba(248, 81, 73, 0.15);
+}
+
+.metric-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  background: rgba(88, 166, 255, 0.15);
+  color: #58a6ff;
+}
+
+.metric-card.warning .metric-icon {
+  background: rgba(248, 81, 73, 0.15);
+  color: #f85149;
+}
+
+.metric-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.metric-label {
+  display: block;
+  font-size: 10px;
+  color: #8b949e;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+
+.metric-value {
+  display: block;
+  font-size: 16px;
+  font-weight: 700;
+  color: #58a6ff;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+}
+
+.metric-card.warning .metric-value {
+  color: #f85149;
+}
+
+/* Decision Display */
+.production-page-container .panel {
+  background: linear-gradient(135deg, #1e1e2e 0%, #2d2d3d 100%);
+  border: 1px solid #404050;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+/* Responsive Layout */
+@media (max-width: 1440px) {
+  .production-grid {
+    grid-template-columns: 1.8fr 1fr;
+  }
+}
+
+@media (max-width: 1200px) {
+  .production-grid {
+    grid-template-columns: 1.5fr 1fr;
+    gap: 12px;
+    padding: 12px;
+  }
+
+  .camera-section {
+    min-height: 300px;
+  }
+
+  .header-title h1 {
+    font-size: 18px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .production-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .camera-section {
+    min-height: 280px;
+  }
+
+  .metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .production-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 12px;
+  }
+
+  .production-header {
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 12px 16px;
+  }
+
+  .header-title h1 {
+    font-size: 16px;
+  }
+
+  .header-status {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .camera-section {
+    min-height: 200px;
+  }
+
+  .metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .metric-card {
+    padding: 10px;
+  }
+
+  .metric-value {
+    font-size: 14px;
+  }
+}
+
+/* Print Styles */
+@media print {
+  .production-page-container {
+    background: white;
+  }
+
+  .production-header {
+    border-color: #000;
+  }
+
+  .metric-card {
+    border: 1px solid #000;
+    background: white;
+    color: black;
+  }
+
+  .metric-value {
+    color: #1f6feb;
+  }
+}

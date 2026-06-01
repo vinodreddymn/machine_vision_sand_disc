@@ -124,5 +124,6 @@ def run_watchdog(*, settings: RuntimeSettings) -> int:
         ManagedService(name="ai_service", args=["ai"]),
         ManagedService(name="database_service", args=["database"]),
         ManagedService(name="notification_service", args=["notifications"]),
+        ManagedService(name="backup_service", args=["backup"]),
     ]
     return WatchdogService(settings=settings, services=services).run_forever()

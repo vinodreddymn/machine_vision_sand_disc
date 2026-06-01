@@ -1,5 +1,5 @@
 {
-  "expected_hole_count": 5,
+  "expected_hole_count": 8,
   "outer_radius_px": {
     "min": 80,
     "max": 450

@@ -3,12 +3,13 @@ import { SettingsProvider } from '../contexts/SettingsContext';
 import { ModeSelector } from '../components/settings/ModeSelector';
 import { ToleranceForm } from '../components/settings/ToleranceForm';
 import { CalibrationSettings } from '../components/settings/CalibrationSettings';
+import { ConfigurationManager } from '../components/config/ConfigurationManager';
 import { ErrorBoundary } from '../components/common/ErrorBoundary';
 import { useSnapshotContext } from '../contexts/SnapshotContext';
 import { setInspectionMode } from '../services/toleranceService';
 import type { InspectionMode } from '../types/settings';
 
-type SettingsTab = 'calibration' | 'tolerances';
+type SettingsTab = 'calibration' | 'tolerances' | 'configurations';
 
 interface SettingsPageProps {
   active: boolean;
@@ -64,6 +65,14 @@ export function SettingsPage({
           >
             Tolerances &amp; Mode
           </button>
+          <button
+            id="settings-tab-configurations"
+            className={`sidebar-button ${settingsTab === 'configurations' ? 'active' : ''}`}
+            style={{ fontSize: '13px', padding: '6px 14px' }}
+            onClick={() => onSettingsTabChange('configurations')}
+          >
+            System Configurations
+          </button>
         </div>
 
         {settingsTab === 'tolerances' && (
@@ -83,6 +92,14 @@ export function SettingsPage({
         {settingsTab === 'calibration' && (
           <ErrorBoundary>
             <CalibrationSettings />
+          </ErrorBoundary>
+        )}
+
+        {settingsTab === 'configurations' && (
+          <ErrorBoundary>
+            <div style={{ height: '100%', overflow: 'hidden' }}>
+              <ConfigurationManager />
+            </div>
           </ErrorBoundary>
         )}
       </div>

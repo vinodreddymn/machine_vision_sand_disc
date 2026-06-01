@@ -1,0 +1,15 @@
+{
+  "email_enabled": false,
+  "smtp_host": "smtp.example.com",
+  "smtp_port": 587,
+  "smtp_username": "",
+  "smtp_password_env": "DISK_VISION_SMTP_PASSWORD",
+  "smtp_use_tls": true,
+  "email_from": "diskvision@example.com",
+  "email_to": ["alerts@example.com"],
+
+  "telegram_enabled": false,
+  "telegram_bot_token_env": "DISK_VISION_TELEGRAM_BOT_TOKEN",
+  "telegram_chat_ids": []
+}
+

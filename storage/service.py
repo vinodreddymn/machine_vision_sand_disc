@@ -41,6 +41,8 @@ class InspectionRepository(Protocol):
     def create_user(self, *, username: str, password_hash: str, role: str) -> int: ...
     def ensure_default_admin(self, *, username: str, password_hash: str) -> int | None: ...
     def write_audit_log(self, *, actor: str | None, action: str, resource: str | None, message: str, details: dict[str, Any] | None) -> int: ...
+    def list_users(self, limit: int = 200) -> list[dict]: ...
+    def list_audit_logs(self, limit: int = 200) -> list[dict]: ...
 
 
 class InspectionStorageService:
@@ -168,3 +170,9 @@ class InspectionStorageService:
         details: dict[str, Any] | None,
     ) -> int:
         return self.repository.write_audit_log(actor=actor, action=action, resource=resource, message=message, details=details)
+
+    def list_users(self, limit: int = 200) -> list[dict]:
+        return self.repository.list_users(limit)
+
+    def list_audit_logs(self, limit: int = 200) -> list[dict]:
+        return self.repository.list_audit_logs(limit)

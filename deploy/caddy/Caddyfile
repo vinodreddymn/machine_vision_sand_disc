@@ -1,0 +1,14 @@
+# HTTPS reverse proxy template for DiskVisionInspector
+#
+# Usage:
+# - Install Caddy on the target host
+# - Point DNS (or /etc/hosts for LAN) at the machine running DiskVisionInspector
+# - Update the site name below
+# - Caddy will obtain/renew TLS certificates automatically (public DNS required for ACME)
+
+diskvision.local {
+  encode gzip
+
+  reverse_proxy 127.0.0.1:8010
+}
+

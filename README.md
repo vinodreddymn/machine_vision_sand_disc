@@ -102,6 +102,34 @@ dataset/
 
 Station 2 folders are also created for future expansion.
 
+## AI Data Cleanup
+
+When starting a new training cycle on different part types, use the cleanup system to delete old training data:
+
+**Via Web Admin Panel:**
+1. Navigate to Admin → Data Management tab
+2. Select what to delete (training data, outputs, or database records)
+3. Review storage estimation
+4. Confirm deletion
+
+**Via Command Line:**
+```powershell
+# Delete training dataset
+python scripts/cleanup_ai_data.py --dataset-only
+
+# Delete everything and start fresh
+python scripts/cleanup_ai_data.py --full --confirm
+```
+
+**Features:**
+- ✅ Two-stage confirmation to prevent accidents
+- ✅ Shows storage freed and items deleted
+- ✅ Generates timestamped cleanup reports
+- ✅ Preserves empty directory structure
+- ✅ Role-based access control (ADMIN only)
+
+For complete documentation, see [CLEANUP_GUIDE.md](CLEANUP_GUIDE.md).
+
 ## Network API
 
 Headless mode exposes:

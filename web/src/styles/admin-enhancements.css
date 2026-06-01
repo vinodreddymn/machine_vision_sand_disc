@@ -1,0 +1,275 @@
+/* Admin Page Enhancement Styles - Industry 4.0 Theme */
+
+.admin-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid #30363d;
+  background: #0d1117;
+  margin: 12px -16px 0 -16px;
+  padding: 0 16px;
+  overflow-x: auto;
+}
+
+.admin-tab {
+  padding: 12px 16px;
+  background: transparent;
+  border: none;
+  color: #8b949e;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-tab:hover {
+  color: #c9d1d9;
+}
+
+.admin-tab.active {
+  color: #58a6ff;
+  border-bottom-color: #58a6ff;
+}
+
+.admin-tab svg {
+  flex-shrink: 0;
+}
+
+/* Compliance Dashboard */
+.compliance-dashboard {
+  padding: 16px 0;
+}
+
+.compliance-header {
+  margin-bottom: 24px;
+}
+
+.compliance-header h3 {
+  margin: 0 0 8px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #c9d1d9;
+}
+
+.compliance-subtitle {
+  margin: 0;
+  font-size: 13px;
+  color: #8b949e;
+}
+
+.compliance-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.compliance-metric {
+  display: flex;
+  gap: 16px;
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  padding: 16px;
+  transition: all 0.2s;
+}
+
+.compliance-metric:hover {
+  border-color: #58a6ff;
+  background: #0d1117;
+}
+
+.metric-icon {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  background: rgba(63, 185, 80, 0.1);
+  color: #3fb950;
+}
+
+.metric-icon.compliance-ok {
+  background: rgba(63, 185, 80, 0.1);
+  color: #3fb950;
+}
+
+.metric-icon.compliance-warning {
+  background: rgba(248, 81, 73, 0.1);
+  color: #f85149;
+}
+
+.metric-info {
+  flex: 1;
+}
+
+.metric-info h4 {
+  margin: 0 0 4px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #c9d1d9;
+}
+
+.metric-info p {
+  margin: 0 0 8px 0;
+  font-size: 12px;
+  color: #8b949e;
+}
+
+.metric-status {
+  display: inline-block;
+  padding: 3px 8px;
+  background: rgba(63, 185, 80, 0.15);
+  color: #3fb950;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.compliance-info {
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  padding: 16px;
+}
+
+.compliance-info h4 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #c9d1d9;
+}
+
+.compliance-info ul {
+  margin: 0;
+  padding-left: 20px;
+  list-style: none;
+}
+
+.compliance-info li {
+  padding: 6px 0;
+  font-size: 13px;
+  color: #8b949e;
+  line-height: 1.5;
+}
+
+.compliance-info li::before {
+  content: '';
+  display: inline-block;
+  width: 4px;
+  height: 4px;
+  background: #3fb950;
+  border-radius: 50%;
+  margin-right: 8px;
+  margin-left: -16px;
+}
+
+/* Role Badges */
+.role-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.role-badge.role-operator {
+  background: rgba(88, 166, 255, 0.15);
+  color: #58a6ff;
+}
+
+.role-badge.role-supervisor {
+  background: rgba(248, 113, 113, 0.15);
+  color: #f87171;
+}
+
+.role-badge.role-admin {
+  background: rgba(63, 185, 80, 0.15);
+  color: #3fb950;
+}
+
+/* Configuration Key Badge */
+.config-key-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  background: #1f6feb;
+  color: #ffffff;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  white-space: nowrap;
+}
+
+/* Action Badge */
+.action-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+}
+
+.action-badge.action-create {
+  background: rgba(63, 185, 80, 0.15);
+  color: #3fb950;
+}
+
+.action-badge.action-update {
+  background: rgba(88, 166, 255, 0.15);
+  color: #58a6ff;
+}
+
+.action-badge.action-delete {
+  background: rgba(248, 81, 73, 0.15);
+  color: #f85149;
+}
+
+/* Audit Trail Table Enhancement */
+.inspection-table tbody tr {
+  transition: all 0.2s;
+}
+
+.inspection-table tbody tr:hover {
+  background: #161b22;
+}
+
+.inspection-table td {
+  padding: 10px 12px;
+  font-size: 12px;
+}
+
+.inspection-table th {
+  padding: 10px 12px;
+  background: #0d1117;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .compliance-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-tabs {
+    flex-wrap: wrap;
+  }
+
+  .admin-tab {
+    font-size: 12px;
+    padding: 10px 12px;
+  }
+}

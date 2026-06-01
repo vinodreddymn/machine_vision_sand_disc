@@ -9,6 +9,7 @@ import os
 import time
 from pathlib import Path
 from typing import Any
+import re
 
 import cv2
 import numpy as np
@@ -20,13 +21,17 @@ from pydantic import BaseModel
 from config.settings import load_tolerances, save_tolerances, SUPPORTED_INSPECTION_MODES
 from config.settings import POSTGRES_DSN
 from config.settings import load_security_config
+from config.settings import load_notifications_config
 from services.alarm_manager import AlarmManager
+from services.config_manager import ConfigurationService, get_config_service
 from services.health_monitor import HealthMonitorService
 from services.inspection_engine import InspectionEngine
 from services.notifications import (
     DashboardNotificationChannel,
     LogNotificationChannel,
     NotificationDispatcher,
+    EmailNotificationChannel,
+    TelegramNotificationChannel,
 )
 from disk_vision_inspector.config_service.settings import RuntimeSettings
 from services.calibration.validation import validate_calibration
@@ -76,6 +81,13 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class CreateUserRequest(BaseModel):
+    username: str
+    password: str
+    role: str = ROLE_OPERATOR
+    active: bool = True
+
+
 def _build_default_engine() -> InspectionEngine:
     storage: InspectionStorageService | None = None
     try:
@@ -92,7 +104,28 @@ def create_app(engine: InspectionEngine | None = None) -> FastAPI:
     jwt_cfg = load_jwt_config(security_cfg)
     dashboard_notifications = DashboardNotificationChannel()
     log_notifications = LogNotificationChannel()
-    dispatcher = NotificationDispatcher(channels=[dashboard_notifications, log_notifications])
+    notif_cfg = load_notifications_config()
+    channels = [dashboard_notifications, log_notifications]
+    if bool(notif_cfg.get("email_enabled", False)):
+        channels.append(
+            EmailNotificationChannel(
+                host=str(notif_cfg.get("smtp_host", "")),
+                port=int(notif_cfg.get("smtp_port", 587)),
+                username=str(notif_cfg.get("smtp_username", "")),
+                password_env=str(notif_cfg.get("smtp_password_env", "DISK_VISION_SMTP_PASSWORD")),
+                use_tls=bool(notif_cfg.get("smtp_use_tls", True)),
+                email_from=str(notif_cfg.get("email_from", "")),
+                email_to=[str(x) for x in (notif_cfg.get("email_to", []) or [])],
+            )
+        )
+    if bool(notif_cfg.get("telegram_enabled", False)):
+        channels.append(
+            TelegramNotificationChannel(
+                bot_token_env=str(notif_cfg.get("telegram_bot_token_env", "DISK_VISION_TELEGRAM_BOT_TOKEN")),
+                chat_ids=[str(x) for x in (notif_cfg.get("telegram_chat_ids", []) or [])],
+            )
+        )
+    dispatcher = NotificationDispatcher(channels=channels)
     alarm_manager = AlarmManager(
         storage=engine.storage if engine.storage_available else None,
         notification_dispatcher=dispatcher,
@@ -197,6 +230,70 @@ def create_app(engine: InspectionEngine | None = None) -> FastAPI:
             pass
         return {"token": token, "auth_enabled": True, "role": user["role"]}
 
+    @app.get("/api/admin/users")
+    def list_users(_: dict[str, Any] = Depends(_require_role(ROLE_ADMIN)), limit: int = 200) -> list[dict[str, Any]]:
+        if not engine.storage_available or engine.storage is None:
+            raise HTTPException(status_code=503, detail="Storage is offline")
+        users = engine.storage.list_users(limit=limit)
+        normalized: list[dict[str, Any]] = []
+        for row in users:
+            created_at = row.get("created_at")
+            normalized.append(
+                {
+                    "id": int(row.get("id", 0)),
+                    "created_at": created_at.isoformat() if hasattr(created_at, "isoformat") else str(created_at),
+                    "username": str(row.get("username", "")),
+                    "role": str(row.get("role", "")),
+                    "active": bool(row.get("active", False)),
+                }
+            )
+        return normalized
+
+    @app.post("/api/admin/users")
+    def create_user(req: CreateUserRequest, _: dict[str, Any] = Depends(_require_role(ROLE_ADMIN))) -> dict[str, Any]:
+        if not engine.storage_available or engine.storage is None:
+            raise HTTPException(status_code=503, detail="Storage is offline")
+        if not re.fullmatch(r"[a-zA-Z0-9_.-]{3,32}", req.username.strip()):
+            raise HTTPException(status_code=400, detail="Invalid username (3-32 chars: a-z,0-9,._-)")
+        if len(req.password) < 6:
+            raise HTTPException(status_code=400, detail="Password too short (min 6)")
+        role = req.role.strip().upper()
+        if role not in {ROLE_OPERATOR, ROLE_SUPERVISOR, ROLE_ADMIN}:
+            raise HTTPException(status_code=400, detail="Invalid role")
+        user_id = engine.storage.create_user(username=req.username, password_hash=hash_password(req.password), role=role)
+        try:
+            engine.storage.write_audit_log(
+                actor="admin",
+                action="CREATE_USER",
+                resource="app_users",
+                message=f"Created user {req.username}",
+                details={"username": req.username, "role": role},
+            )
+        except Exception:
+            pass
+        return {"status": "success", "id": user_id}
+
+    @app.get("/api/admin/audit-logs")
+    def audit_logs(_: dict[str, Any] = Depends(_require_role(ROLE_ADMIN)), limit: int = 200) -> list[dict[str, Any]]:
+        if not engine.storage_available or engine.storage is None:
+            raise HTTPException(status_code=503, detail="Storage is offline")
+        rows = engine.storage.list_audit_logs(limit=limit)
+        out: list[dict[str, Any]] = []
+        for row in rows:
+            created_at = row.get("created_at")
+            out.append(
+                {
+                    "id": int(row.get("id", 0)),
+                    "created_at": created_at.isoformat() if hasattr(created_at, "isoformat") else str(created_at),
+                    "actor": row.get("actor"),
+                    "action": row.get("action"),
+                    "resource": row.get("resource"),
+                    "message": row.get("message"),
+                    "details": row.get("details"),
+                }
+            )
+        return out
+
     @app.get("/api/cameras")
     def cameras() -> list[dict[str, Any]]:
         return engine.camera_status()
@@ -228,6 +325,95 @@ def create_app(engine: InspectionEngine | None = None) -> FastAPI:
             raise HTTPException(status_code=400, detail=f"Unsupported mode: {request.mode}")
         engine.inspection_mode = mode_val
         return {"mode": engine.inspection_mode}
+
+    # Configuration Management Endpoints (Industry 4.0 compliant)
+    config_service = get_config_service()
+
+    @app.get("/api/config/all")
+    def get_all_configs() -> list[dict[str, Any]]:
+        """Get all active configurations with metadata."""
+        try:
+            return config_service.list_all_configs()
+        except Exception as error:
+            raise HTTPException(status_code=500, detail=str(error)) from error
+
+    @app.get("/api/config/{config_key}")
+    def get_config(config_key: str) -> dict[str, Any]:
+        """Get a specific configuration by key."""
+        try:
+            config_data = config_service.load_config(config_key)
+            if not config_data:
+                raise HTTPException(status_code=404, detail=f"Configuration not found: {config_key}")
+            return config_data
+        except Exception as error:
+            raise HTTPException(status_code=500, detail=str(error)) from error
+
+    @app.post("/api/config/{config_key}")
+    def save_config(
+        config_key: str,
+        config_data: dict[str, Any],
+        description: str | None = None,
+        reason: str | None = None,
+        _: dict[str, Any] = Depends(_require_role(ROLE_ADMIN))
+    ) -> dict[str, Any]:
+        """Save a configuration with automatic versioning and audit trail."""
+        try:
+            user = _
+            updated_by = user.get("sub", "system") if user else "system"
+            return config_service.save_config(
+                config_key,
+                config_data,
+                updated_by=updated_by,
+                description=description,
+                reason=reason
+            )
+        except Exception as error:
+            raise HTTPException(status_code=400, detail=str(error)) from error
+
+    @app.get("/api/config/{config_key}/versions")
+    def get_config_versions(config_key: str, limit: int = 10) -> list[dict[str, Any]]:
+        """Get version history for a configuration."""
+        try:
+            return config_service.list_config_versions(config_key, limit=limit)
+        except Exception as error:
+            raise HTTPException(status_code=500, detail=str(error)) from error
+
+    @app.post("/api/config/{config_key}/rollback/{version}")
+    def rollback_config(
+        config_key: str,
+        version: int,
+        reason: str | None = None,
+        _: dict[str, Any] = Depends(_require_role(ROLE_ADMIN))
+    ) -> dict[str, Any]:
+        """Rollback a configuration to a previous version."""
+        try:
+            user = _
+            rolled_back_by = user.get("sub", "system") if user else "system"
+            return config_service.rollback_config(
+                config_key,
+                version,
+                rolled_back_by=rolled_back_by,
+                reason=reason
+            )
+        except Exception as error:
+            raise HTTPException(status_code=400, detail=str(error)) from error
+
+    @app.get("/api/config/audit-log")
+    def get_config_audit_log(
+        config_key: str | None = None,
+        limit: int = 100,
+        _: dict[str, Any] = Depends(_require_role(ROLE_ADMIN))
+    ) -> list[dict[str, Any]]:
+        """Get configuration audit log for compliance and traceability."""
+        try:
+            logs = config_service.get_audit_log(config_key=config_key, limit=limit)
+            # Convert datetime objects to ISO format strings
+            for log in logs:
+                if hasattr(log.get("changed_at"), "isoformat"):
+                    log["changed_at"] = log["changed_at"].isoformat()
+            return logs
+        except Exception as error:
+            raise HTTPException(status_code=500, detail=str(error)) from error
 
     @app.get("/api/metrics")
     def metrics() -> dict[str, Any]:
@@ -305,8 +491,29 @@ def create_app(engine: InspectionEngine | None = None) -> FastAPI:
         return {
             "dashboard": dashboard_notifications.list_events(200),
             "logs": log_notifications.recent(200),
-            "channels": ["dashboard", "logs", "email", "telegram", "sms"],
+            "channels": dispatcher.channel_status(),
         }
+
+    @app.post("/api/admin/notification-test")
+    def notification_test(
+        severity: str = "INFO",
+        category: str = "TEST",
+        message: str = "Notification test event",
+        _: dict[str, Any] = Depends(_require_role(ROLE_ADMIN)),
+    ) -> dict[str, Any]:
+        dispatcher.notify(severity=severity, category=category, message=message, source="admin_test")
+        return {"status": "sent", "channels": dispatcher.channel_status()}
+
+    @app.post("/api/admin/backup/create")
+    def admin_backup_create(_: dict[str, Any] = Depends(_require_role(ROLE_ADMIN))) -> dict[str, Any]:
+        """Create a backup bundle via the local backup service (if available)."""
+        import httpx
+        try:
+            res = httpx.post("http://127.0.0.1:8115/backup/create", timeout=600.0)
+            res.raise_for_status()
+            return res.json()
+        except Exception as error:
+            raise HTTPException(status_code=503, detail=f"Backup service unavailable: {error}")
 
     @app.get("/api/system/services")
     def system_services() -> dict[str, Any]:
@@ -657,6 +864,125 @@ def create_app(engine: InspectionEngine | None = None) -> FastAPI:
             media_type="application/pdf",
             headers={"Content-Disposition": f"attachment; filename=calibration_report_{camera_id}.pdf"},
         )
+
+    # ─── AI Data Cleanup ───────────────────────────────────────────────────────
+
+    @app.get("/api/admin/cleanup/status")
+    def cleanup_status(_: dict[str, Any] = Depends(_require_role(ROLE_ADMIN))) -> dict[str, Any]:
+        """Get current dataset size and inspection record count."""
+        from config.settings import DATASET_DIR, OUTPUT_DIR
+        from pathlib import Path
+
+        def count_items(path: Path) -> int:
+            if not path.exists():
+                return 0
+            return sum(1 for _ in path.rglob("*") if _.is_file())
+
+        def get_size_mb(path: Path) -> float:
+            if not path.exists():
+                return 0.0
+            total = sum(f.stat().st_size for f in path.rglob("*") if f.is_file())
+            return total / (1024 * 1024)
+
+        good_count = count_items(DATASET_DIR / "good")
+        defect_count = count_items(DATASET_DIR / "defect")
+        passed_count = count_items(OUTPUT_DIR / "passed")
+        failed_count = count_items(OUTPUT_DIR / "failed")
+
+        dataset_size = get_size_mb(DATASET_DIR / "good") + get_size_mb(DATASET_DIR / "defect")
+        outputs_size = get_size_mb(OUTPUT_DIR / "passed") + get_size_mb(OUTPUT_DIR / "failed")
+
+        inspection_count = 0
+        if engine.storage_available and engine.storage is not None:
+            try:
+                with engine.storage.repository._connect() as conn:
+                    with conn.cursor() as cur:
+                        cur.execute("SELECT COUNT(*) FROM inspection_records")
+                        row = cur.fetchone()
+                        inspection_count = row[0] if row else 0
+            except Exception:
+                pass
+
+        return {
+            "training_data": {
+                "good_images": good_count,
+                "defect_images": defect_count,
+                "total_images": good_count + defect_count,
+                "size_mb": round(dataset_size, 2),
+            },
+            "inspection_outputs": {
+                "passed_images": passed_count,
+                "failed_images": failed_count,
+                "total_images": passed_count + failed_count,
+                "size_mb": round(outputs_size, 2),
+            },
+            "database": {
+                "inspection_records": inspection_count,
+            },
+        }
+
+    class CleanupRequest(BaseModel):
+        clean_dataset: bool = True
+        clean_outputs: bool = False
+        clean_database: bool = False
+
+    @app.post("/api/admin/cleanup/execute")
+    def cleanup_execute(
+        request: CleanupRequest,
+        _: dict[str, Any] = Depends(_require_role(ROLE_ADMIN)),
+    ) -> dict[str, Any]:
+        """Execute cleanup of AI training data and optionally inspection history."""
+        import subprocess
+        from config.settings import PROJECT_ROOT
+
+        # Build cleanup command
+        cleanup_script = PROJECT_ROOT / "scripts" / "cleanup_ai_data.py"
+        cmd = ["python", str(cleanup_script)]
+
+        if request.clean_dataset:
+            cmd.append("--dataset-only")
+        elif request.clean_outputs:
+            cmd.append("--outputs-only")
+        elif request.clean_database:
+            cmd.extend(["--full", "--keep-database"])
+
+        if request.clean_dataset and request.clean_outputs and request.clean_database:
+            cmd = ["python", str(cleanup_script), "--full"]
+        elif request.clean_dataset and request.clean_outputs:
+            cmd = ["python", str(cleanup_script)]
+            # Run both (dataset already in cmd)
+
+        cmd.append("--confirm")  # Skip confirmation prompts
+
+        try:
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=300.0,
+                cwd=str(PROJECT_ROOT),
+            )
+
+            output = result.stdout + result.stderr
+            success = result.returncode == 0
+
+            return {
+                "status": "success" if success else "error",
+                "output": output,
+                "return_code": result.returncode,
+            }
+        except subprocess.TimeoutExpired:
+            return {
+                "status": "error",
+                "output": "Cleanup operation timed out (>5 minutes)",
+                "return_code": 124,
+            }
+        except Exception as e:
+            return {
+                "status": "error",
+                "output": str(e),
+                "return_code": 1,
+            }
 
     # ─── WebSocket ────────────────────────────────────────────────────────────
 

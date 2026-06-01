@@ -1,0 +1,20 @@
+[Unit]
+Description=DiskVisionInspector Watchdog (Modular Services)
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=diskvision
+Group=diskvision
+WorkingDirectory=/opt/diskvision/DiskVisionInspector
+EnvironmentFile=/opt/diskvision/DiskVisionInspector/deploy/env/diskvision.env
+ExecStart=/opt/diskvision/DiskVisionInspector/.venv/bin/python -m disk_vision_inspector.run watchdog
+Restart=always
+RestartSec=2
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+

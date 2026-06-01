@@ -1,3 +1,10 @@
+@import './styles/json-editor.css';
+@import './styles/config-manager.css';
+@import './styles/admin-enhancements.css';
+@import './styles/event-log.css';
+@import './styles/production-dashboard.css';
+@import './styles/cleanup-manager.css';
+
 * {
   box-sizing: border-box;
 }

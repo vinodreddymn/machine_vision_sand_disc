@@ -7,8 +7,8 @@ import { postJson } from '../../services/apiService';
 import { computeYieldRate } from '../../utils/calculations';
 import { API } from '../../utils/constants';
 
-type Tab = 'production' | 'training' | 'history' | 'system' | 'settings';
-type SettingsTab = 'calibration' | 'tolerances';
+type Tab = 'production' | 'training' | 'history' | 'system' | 'admin' | 'settings';
+type SettingsTab = 'calibration' | 'tolerances' | 'configurations';
 
 interface HeaderProps {
   activeTab: Tab;
@@ -21,6 +21,7 @@ function getSubtitle(activeTab: Tab, settingsTab: SettingsTab): string {
     case 'training': return 'Ground-Truth Dataset Collector & Labeling';
     case 'history': return 'Industry 4.0 SQL History Database Browser';
     case 'system': return 'Industrial System Health, Alarms, and Diagnostics';
+    case 'admin': return 'User Management and System Administration';
     case 'settings':
       return settingsTab === 'calibration'
         ? 'One-Time Camera Calibration — px → mm'

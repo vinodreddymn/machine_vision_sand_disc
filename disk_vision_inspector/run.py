@@ -10,6 +10,7 @@ from disk_vision_inspector.services.ai_service.runtime import run_ai_service
 from disk_vision_inspector.services.camera_service.runtime import run_camera_service
 from disk_vision_inspector.services.database_service.runtime import run_database_service
 from disk_vision_inspector.services.notification_service.runtime import run_notification_service
+from disk_vision_inspector.services.backup_service.runtime import run_backup_service
 
 
 def main() -> int:
@@ -21,6 +22,7 @@ def main() -> int:
     sub.add_parser("ai", help="Run AI/vision service scaffold.")
     sub.add_parser("database", help="Run database service scaffold.")
     sub.add_parser("notifications", help="Run notification service scaffold.")
+    sub.add_parser("backup", help="Run backup service (create bundles).")
     sub.add_parser("watchdog", help="Run watchdog supervisor (starts other services).")
     args = parser.parse_args()
 
@@ -37,6 +39,8 @@ def main() -> int:
         return run_database_service()
     if args.cmd == "notifications":
         return run_notification_service()
+    if args.cmd == "backup":
+        return run_backup_service()
     if args.cmd == "watchdog":
         return run_watchdog(settings=settings)
     raise SystemExit(2)

@@ -26,6 +26,7 @@ Additional scaffolds (independently runnable):
 .\.venv\Scripts\python -m disk_vision_inspector.run ai
 .\.venv\Scripts\python -m disk_vision_inspector.run database
 .\.venv\Scripts\python -m disk_vision_inspector.run notifications
+.\.venv\Scripts\python -m disk_vision_inspector.run backup
 ```
 
 ## Logging
@@ -40,6 +41,7 @@ outputs/logs/camera_service.log
 outputs/logs/ai_service.log
 outputs/logs/database_service.log
 outputs/logs/notification_service.log
+outputs/logs/backup_service.log
 ```
 
 Legacy runtime continues using `outputs/logs/inspection.log`.

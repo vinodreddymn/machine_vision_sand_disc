@@ -1,0 +1,238 @@
+/* Production Page Event Log Styles - Industry 4.0 Enhancement */
+
+.event-log-panel {
+  display: flex;
+  flex-direction: column;
+  height: 320px;
+  background: #1e1e2e;
+  border: 1px solid #404050;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.event-log-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, #2d2d3d 0%, #1e1e2e 100%);
+  border-bottom: 1px solid #404050;
+}
+
+.event-log-header h2 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #f8fafc;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.log-count {
+  padding: 4px 10px;
+  background: rgba(88, 166, 255, 0.1);
+  color: #58a6ff;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.event-log-container {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 8px 0;
+  background: #0d1117;
+  scroll-behavior: smooth;
+}
+
+.event-log-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.event-log-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.event-log-container::-webkit-scrollbar-thumb {
+  background: #404050;
+  border-radius: 3px;
+}
+
+.event-log-container::-webkit-scrollbar-thumb:hover {
+  background: #505060;
+}
+
+.log-entry {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 14px;
+  border-left: 3px solid transparent;
+  background: transparent;
+  transition: background-color 0.2s, border-color 0.2s;
+  border-bottom: 1px solid rgba(64, 64, 80, 0.3);
+}
+
+.log-entry:hover {
+  background: rgba(88, 166, 255, 0.05);
+}
+
+.log-entry.log-error {
+  border-left-color: #f85149;
+}
+
+.log-entry.log-error:hover {
+  background: rgba(248, 81, 73, 0.08);
+}
+
+.log-entry.log-warning {
+  border-left-color: #d29922;
+}
+
+.log-entry.log-warning:hover {
+  background: rgba(210, 153, 34, 0.08);
+}
+
+.log-entry.log-info {
+  border-left-color: #58a6ff;
+}
+
+.log-entry.log-info:hover {
+  background: rgba(88, 166, 255, 0.05);
+}
+
+.log-entry.log-success {
+  border-left-color: #3fb950;
+}
+
+.log-entry.log-success:hover {
+  background: rgba(63, 185, 80, 0.08);
+}
+
+.log-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 3px;
+  margin-top: 2px;
+}
+
+.log-icon-error {
+  background: rgba(248, 81, 73, 0.15);
+  color: #f85149;
+}
+
+.log-icon-warning {
+  background: rgba(210, 153, 34, 0.15);
+  color: #d29922;
+}
+
+.log-icon-info {
+  background: rgba(88, 166, 255, 0.15);
+  color: #58a6ff;
+}
+
+.log-icon-success {
+  background: rgba(63, 185, 80, 0.15);
+  color: #3fb950;
+}
+
+.log-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.log-message {
+  margin: 0;
+  padding: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #c9d1d9;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.log-entry.log-error .log-message {
+  color: #f85149;
+}
+
+.log-entry.log-warning .log-message {
+  color: #d29922;
+}
+
+.log-entry.log-success .log-message {
+  color: #3fb950;
+}
+
+.log-timestamp {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  color: #6e7681;
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+.log-placeholder {
+  margin: 0;
+  padding: 40px 14px;
+  color: #6e7681;
+  font-size: 13px;
+  text-align: center;
+  font-style: italic;
+}
+
+.event-log-footer {
+  padding: 8px 14px;
+  background: rgba(45, 45, 61, 0.5);
+  border-top: 1px solid #404050;
+  font-size: 10px;
+  color: #6e7681;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.footer-text {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .event-log-panel {
+    height: 280px;
+  }
+
+  .log-entry {
+    padding: 8px 12px;
+  }
+
+  .log-message {
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 768px) {
+  .event-log-panel {
+    height: 240px;
+  }
+
+  .event-log-header {
+    padding: 12px 14px;
+  }
+
+  .event-log-header h2 {
+    font-size: 13px;
+  }
+
+  .log-count {
+    font-size: 10px;
+  }
+}

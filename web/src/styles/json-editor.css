@@ -1,0 +1,123 @@
+/* JSON Editor Styles */
+
+.json-editor {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #1e1e1e;
+  border: 1px solid #3e3e42;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.json-editor-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: #2d2d30;
+  border-bottom: 1px solid #3e3e42;
+}
+
+.json-editor-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.editor-btn {
+  padding: 6px 12px;
+  background: #0e639c;
+  color: #ffffff;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+
+.editor-btn:hover:not(:disabled) {
+  background: #1177bb;
+}
+
+.editor-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.editor-btn.save-btn {
+  background: #007acc;
+}
+
+.editor-btn.save-btn:hover:not(:disabled) {
+  background: #0098ff;
+}
+
+.json-editor-error {
+  padding: 8px 16px;
+  background: #5f1f1f;
+  color: #f48771;
+  font-size: 12px;
+  border-bottom: 1px solid #3e3e42;
+}
+
+.json-editor-error strong {
+  margin-right: 8px;
+}
+
+.json-editor-textarea {
+  flex: 1;
+  padding: 12px 16px;
+  background: #1e1e1e;
+  color: #d4d4d4;
+  border: none;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  resize: none;
+  outline: none;
+  overflow-y: auto;
+  overflow-x: auto;
+}
+
+.json-editor-textarea:focus {
+  background: #252526;
+}
+
+.json-editor-textarea.error {
+  color: #f48771;
+  background: #2d1f1f;
+}
+
+.json-editor-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 16px;
+  background: #2d2d30;
+  border-top: 1px solid #3e3e42;
+  font-size: 11px;
+  color: #858585;
+}
+
+.json-editor-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.status-valid::before {
+  content: '●';
+  color: #4ec9b0;
+  font-size: 12px;
+}
+
+.status-error::before {
+  content: '●';
+  color: #f48771;
+  font-size: 12px;
+}
+
+.json-editor-size {
+  color: #858585;
+}

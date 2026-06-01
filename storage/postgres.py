@@ -640,3 +640,31 @@ class PostgresInspectionRepository:
                     (actor, action, resource, message, Jsonb(details or {})),
                 )
                 return int(cursor.fetchone()[0])
+
+    def list_users(self, limit: int = 200) -> list[dict[str, Any]]:
+        with self._connect(row_factory=dict_row) as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT id, created_at, username, role, active
+                    FROM app_users
+                    ORDER BY created_at DESC, id DESC
+                    LIMIT %s
+                    """,
+                    (limit,),
+                )
+                return cursor.fetchall()
+
+    def list_audit_logs(self, limit: int = 200) -> list[dict[str, Any]]:
+        with self._connect(row_factory=dict_row) as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT id, created_at, actor, action, resource, message, details
+                    FROM audit_logs
+                    ORDER BY created_at DESC, id DESC
+                    LIMIT %s
+                    """,
+                    (limit,),
+                )
+                return cursor.fetchall()

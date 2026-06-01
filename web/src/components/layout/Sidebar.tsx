@@ -5,6 +5,7 @@ import {
   Database,
   Settings,
   HeartPulse,
+  Shield,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
@@ -14,6 +15,7 @@ type Tab =
   | 'training'
   | 'history'
   | 'system'
+  | 'admin'
   | 'settings';
 
 interface SidebarProps {
@@ -26,6 +28,7 @@ const NAV_ITEMS: { id: Tab; label: string; Icon: React.ElementType }[] = [
   { id: 'training', label: 'Training & Datasets', Icon: Activity },
   { id: 'history', label: 'Analytics & Logs', Icon: Database },
   { id: 'system', label: 'System Health', Icon: HeartPulse },
+  { id: 'admin', label: 'Administration', Icon: Shield },
   { id: 'settings', label: 'Settings', Icon: Settings },
 ];
 

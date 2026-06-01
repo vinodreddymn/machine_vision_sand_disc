@@ -10,13 +10,14 @@ import { TrainingPage } from './pages/TrainingPage';
 import { HistoryPage } from './pages/HistoryPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { SystemHealthPage } from './pages/SystemHealthPage';
+import { AdminPage } from './pages/AdminPage';
 import { LoginModal } from './components/auth/LoginModal';
 import { getAuthConfig } from './services/authService';
 
 // ─── Tab Types ────────────────────────────────────────────────────────────────
 
-type Tab = 'production' | 'training' | 'history' | 'system' | 'settings';
-type SettingsTab = 'calibration' | 'tolerances';
+type Tab = 'production' | 'training' | 'history' | 'system' | 'admin' | 'settings';
+type SettingsTab = 'calibration' | 'tolerances' | 'configurations';
 
 // ─── Inner App (needs to be inside SnapshotProvider) ─────────────────────────
 
@@ -68,11 +69,12 @@ function AppInner() {
             <HistoryPage active={activeTab === 'history'} />
           )}
           {activeTab === 'system' && <SystemHealthPage />}
+          {activeTab === 'admin' && <AdminPage />}
           {activeTab === 'settings' && (
             <SettingsPage
               active={activeTab === 'settings'}
               settingsTab={settingsTab}
-              onSettingsTabChange={setSettingsTab}
+              onSettingsTabChange={(tab) => setSettingsTab(tab)}
             />
           )}
         </ErrorBoundary>

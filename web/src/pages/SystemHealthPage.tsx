@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Camera, Database, HardDrive, Network, Thermometer, Workflow } from 'lucide-react';
 import type { Alarm, DeviceStatus, HealthHistory, SystemHealth, ServiceStatus } from '../types/systemHealth';
 import { acknowledgeAlarm, getActiveAlarms, getDeviceStatus, getServiceStatus, getSystemHealth, getSystemHistory } from '../services/systemHealthService';
+import { postJson } from '../services/apiService';
 import { StatusBadge } from '../components/system/StatusBadge';
 import { HealthMetricGrid } from '../components/system/HealthMetricGrid';
 import { AlarmPanel } from '../components/system/AlarmPanel';
@@ -34,6 +35,7 @@ export function SystemHealthPage() {
   const [history, setHistory] = useState<HealthHistory[]>([]);
   const [services, setServices] = useState<Record<string, ServiceStatus>>({});
   const [error, setError] = useState<string | null>(null);
+  const [notifStatus, setNotifStatus] = useState<{ channels: Array<{ type: string }> } | null>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -44,6 +46,12 @@ export function SystemHealthPage() {
         getSystemHistory(24, 200),
       ]);
       const nextServices = await getServiceStatus();
+      try {
+        const n = await fetch('/api/system/notifications').then((r) => r.json() as Promise<{ channels: Array<{ type: string }> }>);
+        setNotifStatus(n);
+      } catch {
+        setNotifStatus(null);
+      }
       setHealth(nextHealth);
       setDevices(nextDevices);
       setAlarms(nextAlarms);
@@ -94,6 +102,25 @@ export function SystemHealthPage() {
               level={levelFromOnline(String(svc.status).toUpperCase() === 'ONLINE')}
             />
           ))}
+        </div>
+      </div>
+
+      <div className="settings-group">
+        <h3 style={{ margin: 0 }}>Notifications</h3>
+        <div style={{ marginTop: '10px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+          {(notifStatus?.channels ?? []).map((c) => (
+            <div key={c.type} className="oee-badge">{c.type}</div>
+          ))}
+          {(!notifStatus || (notifStatus.channels ?? []).length === 0) && (
+            <div style={{ color: '#64748b', fontSize: '13px' }}>No channels configured.</div>
+          )}
+          <button
+            className="button"
+            onClick={() => postJson('/api/admin/notification-test')}
+            style={{ marginLeft: 'auto' }}
+          >
+            Send Test
+          </button>
         </div>
       </div>
 

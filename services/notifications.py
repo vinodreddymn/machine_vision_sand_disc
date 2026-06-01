@@ -2,9 +2,14 @@
 
 from __future__ import annotations
 
+import os
+import smtplib
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Protocol
+from email.message import EmailMessage
+from typing import Any, Protocol
+
+import httpx
 
 
 @dataclass(slots=True)
@@ -56,19 +61,86 @@ class LogNotificationChannel:
 
 
 class EmailNotificationChannel:
-    """Future channel stub for SMTP/SES integrations."""
+    """SMTP email notifications (optional)."""
+
+    def __init__(
+        self,
+        *,
+        host: str,
+        port: int,
+        username: str,
+        password_env: str,
+        use_tls: bool,
+        email_from: str,
+        email_to: list[str],
+    ) -> None:
+        self.host = host
+        self.port = port
+        self.username = username
+        self.password_env = password_env
+        self.use_tls = use_tls
+        self.email_from = email_from
+        self.email_to = email_to
 
     def send(self, event: NotificationEvent) -> None:
-        _ = event
-        return None
+        password = os.getenv(self.password_env, "")
+        if not password or not self.email_to:
+            return
+
+        msg = EmailMessage()
+        msg["From"] = self.email_from
+        msg["To"] = ", ".join(self.email_to)
+        msg["Subject"] = f"[{event.severity}] DiskVision {event.category}"
+        msg.set_content(
+            "\n".join(
+                [
+                    f"Timestamp: {event.timestamp}",
+                    f"Severity: {event.severity}",
+                    f"Category: {event.category}",
+                    f"Source: {event.source}",
+                    "",
+                    event.message,
+                ]
+            )
+        )
+
+        with smtplib.SMTP(self.host, self.port, timeout=10) as smtp:
+            if self.use_tls:
+                smtp.starttls()
+            if self.username:
+                smtp.login(self.username, password)
+            smtp.send_message(msg)
 
 
 class TelegramNotificationChannel:
-    """Future channel stub for Telegram bot integrations."""
+    """Telegram bot notifications (optional)."""
+
+    def __init__(self, *, bot_token_env: str, chat_ids: list[str]) -> None:
+        self.bot_token_env = bot_token_env
+        self.chat_ids = chat_ids
 
     def send(self, event: NotificationEvent) -> None:
-        _ = event
-        return None
+        token = os.getenv(self.bot_token_env, "")
+        if not token or not self.chat_ids:
+            return
+        text = (
+            f"*DiskVision Alert*\n"
+            f"*Severity:* {event.severity}\n"
+            f"*Category:* {event.category}\n"
+            f"*Source:* {event.source}\n"
+            f"*Time:* {event.timestamp}\n\n"
+            f"{event.message}"
+        )
+        url = f"https://api.telegram.org/bot{token}/sendMessage"
+        with httpx.Client(timeout=8.0) as client:
+            for chat_id in self.chat_ids:
+                try:
+                    client.post(
+                        url,
+                        json={"chat_id": chat_id, "text": text, "parse_mode": "Markdown"},
+                    )
+                except Exception:
+                    continue
 
 
 class SmsNotificationChannel:
@@ -96,3 +168,9 @@ class NotificationDispatcher:
                 channel.send(event)
             except Exception:
                 continue
+
+    def channel_status(self) -> list[dict[str, Any]]:
+        out: list[dict[str, Any]] = []
+        for ch in self.channels:
+            out.append({"type": ch.__class__.__name__})
+        return out

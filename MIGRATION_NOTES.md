@@ -75,3 +75,56 @@ Added optional in-memory rate limiting middleware (disabled by default):
 Dashboard login UX:
 - Adds a login modal when auth is enabled and no token is present.
 - Stores token in `localStorage` and attaches `Authorization: Bearer` automatically.
+
+## 2026-06-01 - Phase 12/14/15 Foundations (PLC Manager + Backup/Diagnostics)
+
+PLC integration preparation:
+- Added `automation/plc_manager.py` defining `PLCManager` + `PLCAdapter` interfaces and provider enums for Snap7/Modbus/OPC UA/etc.
+
+Backup/restore foundation:
+- Added modular `backup_service` (`disk_vision_inspector/services/backup_service/runtime.py`) exposing `POST /backup/create`
+- Added CLI helper `scripts/backup_create.py` (calls backup service)
+
+Diagnostics:
+- Added `scripts/health_check.py` and `scripts/diagnostics.py`
+
+## 2026-06-01 - Phase 11/16 Foundations (Admin UI + Reliability Runner)
+
+Admin (user management):
+- Added admin endpoints (RBAC ADMIN):
+  - `GET /api/admin/users`
+  - `POST /api/admin/users`
+- Added dashboard page/tab:
+  - `web/src/pages/AdminPage.tsx`
+
+Reliability testing (baseline):
+- Added soak runner `scripts/run_reliability.py` which generates `RELIABILITY_REPORT.md`
+
+## 2026-06-01 - Phase 13 Foundations (Email + Telegram Notifications)
+
+Added notification delivery config:
+- `config/notifications.json`
+
+Implemented optional delivery channels (disabled by default):
+- SMTP email: `services/notifications.py`
+- Telegram bot: `services/notifications.py`
+
+Wiring:
+- `services/api.py` loads `config/notifications.json` and enables channels in `NotificationDispatcher`
+- Added admin test endpoint: `POST /api/admin/notification-test`
+- System Health page shows configured channels and can trigger a test (requires ADMIN when auth enabled)
+
+## 2026-06-01 - Phase 10/11/14 Enhancements (Audit Logs + Backup Proxy + HTTPS Templates)
+
+Audit logs:
+- Added `GET /api/admin/audit-logs` (ADMIN)
+- Added Audit Logs table on `Administration` page
+
+Backups:
+- Added dashboard proxy endpoint `POST /api/admin/backup/create` which calls backup service on `127.0.0.1:8115`
+- Added UI button on `Administration` page to create and display backup bundle result
+
+HTTPS:
+- Added reverse-proxy templates:
+  - `deploy/caddy/Caddyfile`
+  - `deploy/nginx/diskvision.conf`

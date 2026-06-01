@@ -19,6 +19,7 @@ TOLERANCES_FILE = CONFIG_DIR / "tolerances.json"
 HEALTH_THRESHOLDS_FILE = CONFIG_DIR / "health_thresholds.json"
 IMAGE_RETENTION_FILE = CONFIG_DIR / "image_retention.json"
 SECURITY_FILE = CONFIG_DIR / "security.json"
+NOTIFICATIONS_FILE = CONFIG_DIR / "notifications.json"
 KIOSK_MODE = False  # Set to True to enable kiosk mode (full-screen, no cursor)
 
 MODE_RULE_BASED = "RULE_BASED"
@@ -87,4 +88,10 @@ def load_image_retention() -> dict[str, Any]:
 def load_security_config() -> dict[str, Any]:
     """Load security/auth settings from JSON config."""
     with SECURITY_FILE.open("r", encoding="utf-8") as file:
+        return json.load(file)
+
+
+def load_notifications_config() -> dict[str, Any]:
+    """Load notification delivery settings from JSON config."""
+    with NOTIFICATIONS_FILE.open("r", encoding="utf-8") as file:
         return json.load(file)
