@@ -53,9 +53,9 @@ def _load_env_file(path: Path) -> dict[str, str]:
 
 _storage_env = _load_env_file(STORAGE_ENV_FILE)
 POSTGRES_DSN = os.getenv("DISK_VISION_POSTGRES_DSN") or (
-    f"dbname={_storage_env.get('POSTGRES_DB', 'diskvision')} "
-    f"user={_storage_env.get('POSTGRES_USER', 'postgres')} "
-    f"password={_storage_env.get('POSTGRES_PASSWORD', '')} "
+    f"dbname={_storage_env.get('POSTGRES_DB', 'machine_vision')} "
+    f"user={_storage_env.get('POSTGRES_USER', 'svr_user')} "
+    f"password={_storage_env.get('POSTGRES_PASSWORD', 'india123')} "
     f"host={_storage_env.get('POSTGRES_HOST', 'localhost')} "
     f"port={_storage_env.get('POSTGRES_PORT', '5432')}"
 )
