@@ -337,16 +337,47 @@ def create_app(engine: InspectionEngine | None = None) -> FastAPI:
         except Exception as error:
             raise HTTPException(status_code=500, detail=str(error)) from error
 
+
+    @app.get("/api/config/audit-log")
+    def get_config_audit_log(
+        config_key: str | None = None,
+        limit: int = 100,
+        _: dict[str, Any] = Depends(_require_role(ROLE_ADMIN))
+    ) -> list[dict[str, Any]]:
+        """Get configuration audit log for compliance and traceability."""
+        try:
+            logs = config_service.get_audit_log(config_key=config_key, limit=limit)
+            # Convert datetime objects to ISO format strings
+            for log in logs:
+                if hasattr(log.get("changed_at"), "isoformat"):
+                    log["changed_at"] = log["changed_at"].isoformat()
+            return logs
+        except Exception as error:
+            raise HTTPException(status_code=500, detail=str(error)) from error
+
+
     @app.get("/api/config/{config_key}")
     def get_config(config_key: str) -> dict[str, Any]:
         """Get a specific configuration by key."""
         try:
             config_data = config_service.load_config(config_key)
+
             if not config_data:
-                raise HTTPException(status_code=404, detail=f"Configuration not found: {config_key}")
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Configuration not found: {config_key}"
+                )
+
             return config_data
+
+        except HTTPException:
+            raise
+
         except Exception as error:
-            raise HTTPException(status_code=500, detail=str(error)) from error
+            raise HTTPException(
+                status_code=500,
+                detail=str(error)
+            ) from error
 
     @app.post("/api/config/{config_key}")
     def save_config(
@@ -398,22 +429,6 @@ def create_app(engine: InspectionEngine | None = None) -> FastAPI:
         except Exception as error:
             raise HTTPException(status_code=400, detail=str(error)) from error
 
-    @app.get("/api/config/audit-log")
-    def get_config_audit_log(
-        config_key: str | None = None,
-        limit: int = 100,
-        _: dict[str, Any] = Depends(_require_role(ROLE_ADMIN))
-    ) -> list[dict[str, Any]]:
-        """Get configuration audit log for compliance and traceability."""
-        try:
-            logs = config_service.get_audit_log(config_key=config_key, limit=limit)
-            # Convert datetime objects to ISO format strings
-            for log in logs:
-                if hasattr(log.get("changed_at"), "isoformat"):
-                    log["changed_at"] = log["changed_at"].isoformat()
-            return logs
-        except Exception as error:
-            raise HTTPException(status_code=500, detail=str(error)) from error
 
     @app.get("/api/metrics")
     def metrics() -> dict[str, Any]:

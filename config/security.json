@@ -1,5 +1,5 @@
 {
-  "auth_enabled": false,
+  "auth_enabled": true,
   "jwt_secret_env": "DISK_VISION_JWT_SECRET",
   "jwt_issuer": "diskvision",
   "jwt_exp_minutes": 720,

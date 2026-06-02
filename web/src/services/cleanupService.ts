@@ -33,13 +33,13 @@ export interface CleanupResult {
   return_code: number;
 }
 
-const API_BASE = 'http://localhost:8010';
+const API_BASE = 'http://127.0.0.1:8010';
 
 /**
  * Get current size and count of AI training data
  */
 export async function getCleanupStatus(): Promise<DatasetStatus> {
-  const token = localStorage.getItem('authToken');
+  const token = localStorage.getItem('diskvision_token');
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
   };

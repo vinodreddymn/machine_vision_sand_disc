@@ -70,7 +70,7 @@ export async function saveConfig(
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${localStorage.getItem('auth_token') || ''}`,
+      'Authorization': `Bearer ${localStorage.getItem('diskvision_token') || ''}`,
     },
     body: JSON.stringify({
       ...configData,
@@ -112,7 +112,7 @@ export async function rollbackConfig(
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${localStorage.getItem('auth_token') || ''}`,
+      'Authorization': `Bearer ${localStorage.getItem('diskvision_token') || ''}`,
     },
     body: JSON.stringify({ reason }),
   });
@@ -132,12 +132,24 @@ export async function getConfigAuditLog(
   limit: number = 100
 ): Promise<AuditLogEntry[]> {
   const query = new URLSearchParams();
-  if (configKey) query.append('config_key', configKey);
+
+  if (configKey) {
+    query.append('config_key', configKey);
+  }
+
   query.append('limit', limit.toString());
 
-  const response = await fetch(`${API_BASE}/audit-log?${query}`);
+  const token = localStorage.getItem('diskvision_token');
+
+  const response = await fetch(`${API_BASE}/audit-log?${query.toString()}`, {
+    headers: {
+      Authorization: `Bearer ${token || ''}`,
+    },
+  });
+
   if (!response.ok) {
-    throw new Error(`Failed to fetch audit log: ${response.statusText}`);
+    const detail = await response.text();
+    throw new Error(detail || `Failed to fetch audit log: ${response.status}`);
   }
 
   return response.json();
