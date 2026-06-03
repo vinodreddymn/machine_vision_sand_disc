@@ -12,9 +12,11 @@ EnvironmentFile=/opt/diskvision/DiskVisionInspector/deploy/env/diskvision.env
 ExecStart=/opt/diskvision/DiskVisionInspector/.venv/bin/python -m disk_vision_inspector.run dashboard
 Restart=always
 RestartSec=2
+KillSignal=SIGINT
+TimeoutStopSec=30
+LimitNOFILE=65535
 StandardOutput=journal
 StandardError=journal
 
 [Install]
 WantedBy=multi-user.target
-

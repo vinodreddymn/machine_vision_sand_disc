@@ -10,6 +10,8 @@ import {
   getConfig,
   saveConfig,
   getConfigVersions,
+  getConfigVersion,
+  reloadConfig,
   rollbackConfig,
   getConfigAuditLog,
   ConfigData,
@@ -27,6 +29,7 @@ export function ConfigurationManager() {
   const [currentTab, setCurrentTab] = useState<Tab>('overview');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [reloading, setReloading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -174,6 +177,30 @@ export function ConfigurationManager() {
     }
   }, [selectedConfig]);
 
+  const handleReloadConfig = useCallback(async () => {
+    if (!selectedConfig) return;
+
+    try {
+      setReloading(true);
+      setError(null);
+
+      await reloadConfig(selectedConfig);
+      const [data, version, configData] = await Promise.all([
+        getAllConfigs(),
+        getConfigVersion(selectedConfig),
+        getConfig(selectedConfig),
+      ]);
+      setConfigs(data);
+      setEditData(configData);
+      setSuccessMessage(`Configuration ${selectedConfig} reloaded (v${version})`);
+      setTimeout(() => setSuccessMessage(null), 3000);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setReloading(false);
+    }
+  }, [selectedConfig]);
+
   if (loading) {
     return (
       <div className="config-manager">
@@ -243,7 +270,16 @@ export function ConfigurationManager() {
                 <div className="config-content">
                   <div className="config-header">
                     <h2>{selectedConfig}</h2>
-                    <span className="config-type">JSON Configuration</span>
+                    <div className="config-header-actions">
+                      <span className="config-type">JSON Configuration</span>
+                      <button
+                        className="save-button"
+                        onClick={handleReloadConfig}
+                        disabled={reloading || saving}
+                      >
+                        {reloading ? 'Reloading...' : 'Reload Config'}
+                      </button>
+                    </div>
                   </div>
                   <div className="config-stats">
                     <div className="stat">

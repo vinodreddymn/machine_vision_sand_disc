@@ -1,5 +1,5 @@
 import { getJson, postJson } from './apiService';
-import type { Alarm, DeviceStatus, HealthHistory, SystemHealth, ServiceStatus } from '../types/systemHealth';
+import type { Alarm, DeviceStatus, HealthHistory, StartupDiagnostics, SystemHealth, ServiceStatus } from '../types/systemHealth';
 import { API } from '../utils/constants';
 
 export function getSystemHealth(): Promise<SystemHealth> {
@@ -28,4 +28,8 @@ export function getSystemHistory(hours = 24, limit = 500): Promise<HealthHistory
 
 export function getServiceStatus(): Promise<Record<string, ServiceStatus>> {
   return getJson<Record<string, ServiceStatus>>(API.SYSTEM_SERVICES);
+}
+
+export function getStartupDiagnostics(): Promise<StartupDiagnostics> {
+  return getJson<StartupDiagnostics>('/api/system/diagnostics');
 }

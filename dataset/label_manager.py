@@ -11,6 +11,20 @@ from config.settings import DATASET_DIR
 
 GOOD_LABEL = "GOOD"
 DEFECT_LABEL = "DEFECTIVE"
+WEB_CONFIRM = "WEB_CONFIRM"
+WEB_OVERRIDE = "WEB_OVERRIDE"
+PLC_CONFIRM = "PLC_CONFIRM"
+PLC_OVERRIDE = "PLC_OVERRIDE"
+
+FALSE_SCRATCH = "FALSE_SCRATCH"
+LIGHTING = "LIGHTING"
+REFLECTION = "REFLECTION"
+DUST = "DUST"
+ROI_ERROR = "ROI_ERROR"
+OTHER = "OTHER"
+
+VALID_LABEL_SOURCES = {WEB_CONFIRM, WEB_OVERRIDE, PLC_CONFIRM, PLC_OVERRIDE}
+VALID_OVERRIDE_REASONS = {FALSE_SCRATCH, LIGHTING, REFLECTION, DUST, ROI_ERROR, OTHER}
 
 
 @dataclass(slots=True)
@@ -69,6 +83,24 @@ class LabelManager:
         if value in {"GOOD", "PASS"}:
             return GOOD_LABEL
         return DEFECT_LABEL
+
+    @staticmethod
+    def normalize_label_source(label_source: str | None) -> str:
+        if not label_source:
+            return WEB_CONFIRM
+        value = label_source.strip().upper()
+        if value not in VALID_LABEL_SOURCES:
+            raise ValueError(f"Unsupported label source: {label_source}")
+        return value
+
+    @staticmethod
+    def normalize_override_reason(reason: str | None) -> str | None:
+        if reason is None or not str(reason).strip():
+            return None
+        value = str(reason).strip().upper()
+        if value not in VALID_OVERRIDE_REASONS:
+            raise ValueError(f"Unsupported override reason: {reason}")
+        return value
 
     def read_metadata(self) -> list[dict[str, Any]]:
         metadata_dir = self.dataset_root / "metadata"

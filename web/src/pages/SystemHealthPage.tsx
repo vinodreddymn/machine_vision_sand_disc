@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Camera, Database, HardDrive, Network, Thermometer, Workflow } from 'lucide-react';
-import type { Alarm, DeviceStatus, HealthHistory, SystemHealth, ServiceStatus } from '../types/systemHealth';
-import { acknowledgeAlarm, getActiveAlarms, getDeviceStatus, getServiceStatus, getSystemHealth, getSystemHistory } from '../services/systemHealthService';
+import type { Alarm, DeviceStatus, HealthHistory, StartupDiagnostics, SystemHealth, ServiceStatus } from '../types/systemHealth';
+import { acknowledgeAlarm, getActiveAlarms, getDeviceStatus, getServiceStatus, getStartupDiagnostics, getSystemHealth, getSystemHistory } from '../services/systemHealthService';
 import { postJson } from '../services/apiService';
 import { StatusBadge } from '../components/system/StatusBadge';
 import { HealthMetricGrid } from '../components/system/HealthMetricGrid';
@@ -34,16 +34,18 @@ export function SystemHealthPage() {
   const [alarms, setAlarms] = useState<Alarm[]>([]);
   const [history, setHistory] = useState<HealthHistory[]>([]);
   const [services, setServices] = useState<Record<string, ServiceStatus>>({});
+  const [diagnostics, setDiagnostics] = useState<StartupDiagnostics | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notifStatus, setNotifStatus] = useState<{ channels: Array<{ type: string }> } | null>(null);
 
   const refresh = useCallback(async () => {
     try {
-      const [nextHealth, nextDevices, nextAlarms, nextHistory] = await Promise.all([
+      const [nextHealth, nextDevices, nextAlarms, nextHistory, nextDiagnostics] = await Promise.all([
         getSystemHealth(),
         getDeviceStatus(),
         getActiveAlarms(),
         getSystemHistory(24, 200),
+        getStartupDiagnostics().catch(() => null),
       ]);
       const nextServices = await getServiceStatus();
       try {
@@ -56,6 +58,7 @@ export function SystemHealthPage() {
       setDevices(nextDevices);
       setAlarms(nextAlarms);
       setHistory(nextHistory);
+      setDiagnostics(nextDiagnostics);
       setServices(nextServices);
       setError(null);
     } catch (err) {
@@ -102,6 +105,17 @@ export function SystemHealthPage() {
               level={levelFromOnline(String(svc.status).toUpperCase() === 'ONLINE')}
             />
           ))}
+        </div>
+      </div>
+
+      <div className="settings-group">
+        <h3 style={{ margin: 0 }}>Startup Diagnostics</h3>
+        <div className="sys-badge-grid" style={{ marginTop: '12px' }}>
+          <StatusBadge label="Database" value={diagnostics?.database ?? 'UNKNOWN'} level={levelFromOnline((diagnostics?.database ?? 'OFFLINE') === 'ONLINE')} />
+          <StatusBadge label="Camera" value={diagnostics?.camera ?? 'UNKNOWN'} level={levelFromOnline((diagnostics?.camera ?? 'OFFLINE') !== 'OFFLINE')} />
+          <StatusBadge label="PLC" value={diagnostics?.plc ?? 'UNKNOWN'} level={levelFromOnline((diagnostics?.plc ?? 'OFFLINE') === 'ONLINE')} />
+          <StatusBadge label="Storage" value={diagnostics?.storage ?? 'UNKNOWN'} level={levelFromOnline((diagnostics?.storage ?? 'OFFLINE') === 'ONLINE')} />
+          <StatusBadge label="Model" value={diagnostics?.model ?? 'UNKNOWN'} level={levelFromOnline((diagnostics?.model ?? 'OFFLINE') === 'ONLINE')} />
         </div>
       </div>
 

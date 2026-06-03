@@ -11,16 +11,18 @@ from typing import Any
 import cv2
 import numpy as np
 
+from automation.inspection_controller import InspectionController
 from automation.plc import PLCController, SimulatedPLCController
 from automation.workflow import SingleStationInspectionController, StationRecord
 from camera.sources import CameraSource, UsbCameraSource
-from config.settings import MODE_DATA_COLLECTION, load_tolerances
+from config.settings import MODE_DATA_COLLECTION, load_tolerances, load_confidence_thresholds
 from dataset.collector import DatasetCollector, DatasetSaveResult
 from dataset.label_manager import LabelManager
 from storage.service import InspectionStorageService
 from vision.anomaly_scoring import anomaly_score, assisted_prediction
 from vision.preprocessing import preprocess_image, create_foreground_mask
 from vision.circle_detection import detect_outer_circle
+from vision.patchcore_inference import PatchCoreInferenceService, PatchCoreResult
 
 
 @dataclass(slots=True)
@@ -30,6 +32,9 @@ class PendingLabel:
     record: StationRecord
     system_prediction: str
     anomaly_score: float
+    confidence: float
+    confirmation_mode: str
+    patchcore_result: PatchCoreResult | None = None
 
 
 class InspectionEngine:
@@ -45,6 +50,7 @@ class InspectionEngine:
         inspection_mode: str = MODE_DATA_COLLECTION,
     ) -> None:
         self.plc = plc or SimulatedPLCController()
+        self.runtime_controller = InspectionController()
         self.storage = storage
         self.storage_available = False
         if self.storage is not None:
@@ -59,6 +65,8 @@ class InspectionEngine:
         )
         self.dataset_collector = dataset_collector or DatasetCollector()
         self.label_manager = LabelManager(self.dataset_collector.dataset_root)
+        self.patchcore = PatchCoreInferenceService()
+        self.confidence_thresholds = load_confidence_thresholds()
         self.camera_source = camera_source or UsbCameraSource(0)
         self.inspection_mode = inspection_mode
         self.latest_frame: np.ndarray | None = None
@@ -84,13 +92,21 @@ class InspectionEngine:
     def start(self) -> None:
         if self.running:
             return
+        start_request = getattr(self.plc, "start_request", None)
+        if callable(start_request):
+            start_request()
         self.camera_source.open()
         self.running = True
+        self.runtime_controller.start(requested_by="ENGINE")
         self._thread = threading.Thread(target=self._capture_loop, daemon=True)
         self._thread.start()
         self._log("Inspection engine started.")
 
     def stop(self) -> None:
+        stop_request = getattr(self.plc, "stop_request", None)
+        if callable(stop_request):
+            stop_request()
+        self.runtime_controller.stop(requested_by="ENGINE")
         self.running = False
         if self._thread is not None:
             self._thread.join(timeout=2.0)
@@ -98,9 +114,13 @@ class InspectionEngine:
         self._log("Inspection engine stopped.")
 
     def reset_part(self) -> str:
+        reset_request = getattr(self.plc, "reset_request", None)
+        if callable(reset_request):
+            reset_request()
         part = self.controller.start_new_part()
         with self._lock:
             self.pending_label = None
+        self.runtime_controller.reset(requested_by="ENGINE")
         self._log(f"Started new part: {part.part_id}")
         return part.part_id
 
@@ -124,6 +144,9 @@ class InspectionEngine:
                 
         score = anomaly_score(record.inspection_result) if record.inspection_result else 100.0
         prediction = assisted_prediction(record.inspection_result) if record.inspection_result else "DEFECT"
+        confidence = round(max(0.0, 100.0 - score) / 100.0, 4)
+        patchcore_result = self.patchcore.infer(image)
+        confirmation_mode = self._confirmation_mode(confidence)
         if self.storage_available and self.storage is not None:
             self.storage.persist_station_record(
                 physical_part_id=self.controller.current_part.part_id,
@@ -134,25 +157,70 @@ class InspectionEngine:
                 inspection_mode=self.inspection_mode,
                 cycle_time_ms=record.cycle_time_ms,
             )
-        with self._lock:
-            self.latest_frame = image.copy()
-            self.latest_overlay = record.overlay_image.copy() if record.overlay_image is not None else None
-            self.latest_record = record
-            self.latest_station = "S1"
-            self.pending_label = PendingLabel(
+        pending_label = None
+        if confirmation_mode != "AUTO_ACCEPT":
+            pending_label = PendingLabel(
                 part_id=self.controller.current_part.part_id,
                 station="S1",
                 record=record,
                 system_prediction=prediction,
                 anomaly_score=score,
+                confidence=confidence,
+                confirmation_mode=confirmation_mode,
+                patchcore_result=patchcore_result,
             )
+        else:
+            try:
+                self.dataset_collector.save_labeled_inspection(
+                    part_id=self.controller.current_part.part_id,
+                    station="S1",
+                    source_name=record.source_name,
+                    original_image=image,
+                    overlay_image=record.overlay_image,
+                    inspection_result=record.inspection_result,
+                    system_prediction=prediction,
+                    operator_label=prediction,
+                    label_source="WEB_CONFIRM",
+                    serial_number=record.serial_number,
+                    camera_source=record.source_name,
+                    inspected_at=record.inspected_at or datetime.now().astimezone(),
+                    anomaly_score=score,
+                    confidence=confidence,
+                    inspection_mode=self.inspection_mode,
+                    extra_metadata={
+                        "auto_accepted": True,
+                        "confirmation_mode": confirmation_mode,
+                        "patchcore_result": {
+                            "anomaly_score": patchcore_result.anomaly_score,
+                            "prediction": patchcore_result.prediction,
+                            "model_version": patchcore_result.model_version,
+                        },
+                    },
+                )
+                self._log(f"Auto-accepted inspection: {prediction}")
+            except Exception:
+                pass
+        with self._lock:
+            self.latest_frame = image.copy()
+            self.latest_overlay = record.overlay_image.copy() if record.overlay_image is not None else None
+            self.latest_record = record
+            self.latest_station = "S1"
+            self.pending_label = pending_label
         self._log(f"Inspection complete: prediction={prediction}, score={score}, cycle_time={record.cycle_time_ms}ms")
+        self._log(f"Shadow PatchCore: classical={prediction}, patchcore={patchcore_result.prediction}, score={patchcore_result.anomaly_score}")
         if record.cycle_time_ms is not None:
             self.cycle_times_ms.append(record.cycle_time_ms)
             self.cycle_times_ms = self.cycle_times_ms[-300:]
         return record
 
-    def confirm_label(self, operator_label: str, station: str | None = None) -> DatasetSaveResult:
+    def confirm_label(
+        self,
+        operator_label: str,
+        station: str | None = None,
+        *,
+        label_source: str = "WEB_CONFIRM",
+        override_reason: str | None = None,
+    ) -> DatasetSaveResult:
         with self._lock:
             pending = self.pending_label
         if pending is None:
@@ -171,16 +239,51 @@ class InspectionEngine:
             inspection_result=record.inspection_result,
             system_prediction=pending.system_prediction,
             operator_label=operator_label,
+            label_source=label_source,
+            override_reason=override_reason,
             serial_number=record.serial_number,
             camera_source=record.source_name,
             inspected_at=record.inspected_at or datetime.now().astimezone(),
             anomaly_score=pending.anomaly_score,
+            confidence=pending.confidence,
             inspection_mode=self.inspection_mode,
         )
-        self._log(f"Operator label saved: {operator_label}")
+        if label_source.endswith("OVERRIDE"):
+            self._log(f"Operator override saved: {operator_label}")
+        else:
+            self._log(f"Operator label saved: {operator_label}")
+        if self.storage_available and self.storage is not None:
+            try:
+                self.storage.write_audit_log(
+                    actor="operator",
+                    action="LABEL_OVERRIDE" if label_source.endswith("OVERRIDE") else "LABEL_CONFIRM",
+                    resource="dataset_label_records",
+                    message=f"{label_source} stored for {pending.part_id}",
+                    details={
+                        "part_id": pending.part_id,
+                        "station": pending.station,
+                        "prediction": pending.system_prediction,
+                        "operator_label": operator_label,
+                        "label_source": label_source,
+                        "override_reason": override_reason,
+                        "anomaly_score": pending.anomaly_score,
+                        "confidence": pending.confidence,
+                        "timestamp": (record.inspected_at or datetime.now().astimezone()).isoformat(),
+                    },
+                )
+            except Exception:
+                pass
         with self._lock:
             self.pending_label = None
         return result
+
+    def override_label(self, operator_label: str, station: str | None = None, *, override_reason: str | None = None) -> DatasetSaveResult:
+        return self.confirm_label(
+            operator_label,
+            station=station,
+            label_source="WEB_OVERRIDE",
+            override_reason=override_reason,
+        )
 
     def status(self) -> dict[str, Any]:
         pending = self.pending_label
@@ -193,21 +296,33 @@ class InspectionEngine:
             "pending_label": pending is not None,
             "log_count": len(self.logs),
             "camera_name": self.camera_source.name,
+            "runtime": self.runtime_controller.as_dict(),
         }
 
     def latest_inspection(self) -> dict[str, Any]:
         record = self.latest_record
         pending = self.pending_label
+        latest_prediction = pending.system_prediction if pending else assisted_prediction(record.inspection_result) if record and record.inspection_result else None
+        latest_score = pending.anomaly_score if pending else anomaly_score(record.inspection_result) if record and record.inspection_result else None
         return {
             "part_id": self.controller.current_part.part_id,
             "decision": record.decision.value if record else "WAITING",
             "source_name": record.source_name if record else None,
-            "system_prediction": pending.system_prediction if pending else None,
-            "anomaly_score": pending.anomaly_score if pending else None,
+            "system_prediction": latest_prediction,
+            "anomaly_score": latest_score,
             "defects": record.inspection_result.defects if record and record.inspection_result else [],
             "measurements": record.inspection_result.measurements if record and record.inspection_result else {},
             "cycle_time_ms": record.cycle_time_ms if record else None,
             "inspection_mode": self.inspection_mode,
+            "runtime_state": self.runtime_controller.as_dict(),
+            "confirmation_mode": pending.confirmation_mode if pending else "AUTO_ACCEPT",
+            "patchcore_result": {
+                "anomaly_score": pending.patchcore_result.anomaly_score,
+                "prediction": pending.patchcore_result.prediction,
+            } if pending and pending.patchcore_result else {
+                "anomaly_score": None,
+                "prediction": None,
+            },
         }
 
     def station_status(self, station: str) -> dict[str, Any]:
@@ -235,6 +350,12 @@ class InspectionEngine:
             "stream_url": "/stream/station1",
             "captured_image_url": "/image/station1/overlay",
             "cycle_time_ms": record.cycle_time_ms if record else None,
+            "runtime_state": self.runtime_controller.as_dict(),
+            "confirmation_mode": pending.confirmation_mode if pending else "UNKNOWN",
+            "patchcore_result": {
+                "anomaly_score": pending.patchcore_result.anomaly_score,
+                "prediction": pending.patchcore_result.prediction,
+            } if pending and pending.patchcore_result else None,
         }
 
     def camera_status(self) -> list[dict[str, Any]]:
@@ -282,6 +403,7 @@ class InspectionEngine:
             "camera_source_name": self.camera_source.name,
             "camera_recovery_attempts": self.recovery_attempts,
             "camera_connected": self.last_frame_ts > 0 and (frame_age is not None and frame_age < 5.0),
+            "confidence_thresholds": self.confidence_thresholds,
         }
 
     def reduce_processing_rate(self, factor: float = 1.25) -> None:
@@ -447,3 +569,12 @@ class InspectionEngine:
         if value in {"2", "s2", "station2", "station 2"}:
             return "S2"
         return "S1"
+
+    def _confirmation_mode(self, confidence: float) -> str:
+        high = float(self.confidence_thresholds.get("high_confidence", 0.85))
+        medium = float(self.confidence_thresholds.get("medium_confidence", 0.55))
+        if confidence >= high:
+            return "AUTO_ACCEPT"
+        if confidence >= medium:
+            return "REQUEST_CONFIRMATION"
+        return "REQUIRE_CONFIRMATION"

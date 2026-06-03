@@ -1,7 +1,21 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Shield, UserPlus, Database, AlertCircle, CheckCircle, Clock, Trash2 } from 'lucide-react';
 import type { AppUser, UserRole } from '../types/admin';
-import { createBackup, createUser, listAuditLogs, listUsers, type AuditLog } from '../services/adminService';
+import {
+  activateModel,
+  createBackup,
+  createModel,
+  createUser,
+  deactivateModel,
+  listAuditLogs,
+  listModels,
+  listUnifiedAuditEvents,
+  listUsers,
+  rollbackModel,
+  type AuditLog,
+  type ModelRegistryEntry,
+  type UnifiedAuditEvent,
+} from '../services/adminService';
 import { getConfigAuditLog } from '../services/configService';
 import type { AuditLogEntry } from '../services/configService';
 import { CleanupManager } from '../components/admin/CleanupManager';
@@ -12,24 +26,33 @@ export function AdminPage() {
   const [users, setUsers] = useState<AppUser[]>([]);
   const [audit, setAudit] = useState<AuditLog[]>([]);
   const [configAudit, setConfigAudit] = useState<AuditLogEntry[]>([]);
+  const [timeline, setTimeline] = useState<UnifiedAuditEvent[]>([]);
+  const [models, setModels] = useState<ModelRegistryEntry[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [newUsername, setNewUsername] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [newRole, setNewRole] = useState<UserRole>('OPERATOR');
   const [backupResult, setBackupResult] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'users' | 'audit' | 'compliance' | 'config' | 'cleanup'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'audit' | 'compliance' | 'config' | 'cleanup' | 'timeline' | 'models'>('users');
+  const [modelVersion, setModelVersion] = useState('');
+  const [modelPath, setModelPath] = useState('models/active');
+  const [modelNotes, setModelNotes] = useState('');
 
   const refresh = useCallback(async () => {
     try {
-      const [data, logs, configLogs] = await Promise.all([
+      const [data, logs, configLogs, timelineLogs, modelRows] = await Promise.all([
         listUsers(),
         listAuditLogs(),
         getConfigAuditLog(undefined, 50).catch(() => []),
+        listUnifiedAuditEvents(100).catch(() => []),
+        listModels(50).catch(() => []),
       ]);
       setUsers(data);
       setAudit(logs);
       setConfigAudit(configLogs);
+      setTimeline(timelineLogs);
+      setModels(modelRows);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -62,6 +85,45 @@ export function AdminPage() {
     try {
       const res = await createBackup();
       setBackupResult(JSON.stringify(res, null, 2));
+      await refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  }, [refresh]);
+
+  const handleCreateModel = useCallback(async () => {
+    if (!modelVersion.trim() || !modelPath.trim()) return;
+    setBusy(true);
+    try {
+      await createModel({
+        version: modelVersion.trim(),
+        model_path: modelPath.trim(),
+        notes: modelNotes.trim() || null,
+        active: false,
+      });
+      setModelVersion('');
+      setModelPath('models/active');
+      setModelNotes('');
+      await refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  }, [modelVersion, modelPath, modelNotes, refresh]);
+
+  const handleModelAction = useCallback(async (action: 'activate' | 'deactivate' | 'rollback', version: string) => {
+    setBusy(true);
+    try {
+      if (action === 'activate') {
+        await activateModel(version);
+      } else if (action === 'deactivate') {
+        await deactivateModel(version);
+      } else {
+        await rollbackModel(version);
+      }
       await refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -117,6 +179,20 @@ export function AdminPage() {
         >
           <Trash2 size={16} />
           Data Management
+        </button>
+        <button
+          className={`admin-tab ${activeTab === 'timeline' ? 'active' : ''}`}
+          onClick={() => setActiveTab('timeline')}
+        >
+          <Clock size={16} />
+          Unified Timeline
+        </button>
+        <button
+          className={`admin-tab ${activeTab === 'models' ? 'active' : ''}`}
+          onClick={() => setActiveTab('models')}
+        >
+          <Database size={16} />
+          Model Registry
         </button>
       </div>
 
@@ -348,6 +424,107 @@ export function AdminPage() {
         <div className="settings-group">
           <CleanupManager />
         </div>
+      )}
+
+      {activeTab === 'timeline' && (
+        <div className="settings-group">
+          <h3 style={{ margin: 0 }}>Unified Audit Timeline</h3>
+          <div className="history-table-container">
+            <table className="inspection-table">
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Source</th>
+                  <th>Actor</th>
+                  <th>Action</th>
+                  <th>Resource</th>
+                  <th>Message</th>
+                </tr>
+              </thead>
+              <tbody>
+                {timeline.map((entry, idx) => (
+                  <tr key={`${entry.timestamp}-${idx}`}>
+                    <td>{new Date(entry.timestamp).toLocaleString()}</td>
+                    <td>{entry.source}</td>
+                    <td>{entry.actor ?? '--'}</td>
+                    <td>{entry.action}</td>
+                    <td>{entry.resource ?? '--'}</td>
+                    <td>{entry.message}</td>
+                  </tr>
+                ))}
+                {timeline.length === 0 && (
+                  <tr><td colSpan={6} style={{ color: '#64748b' }}>No unified audit events found.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'models' && (
+        <>
+          <div className="settings-group">
+            <h3 style={{ margin: 0 }}>Create Model Version</h3>
+            <div className="settings-grid">
+              <div className="settings-field">
+                <label>Version</label>
+                <input value={modelVersion} onChange={(e) => setModelVersion(e.target.value)} placeholder="v1.0.0" />
+              </div>
+              <div className="settings-field">
+                <label>Model Path</label>
+                <input value={modelPath} onChange={(e) => setModelPath(e.target.value)} placeholder="models/v1/model.onnx" />
+              </div>
+              <div className="settings-field">
+                <label>Notes</label>
+                <input value={modelNotes} onChange={(e) => setModelNotes(e.target.value)} placeholder="Training notes or run id" />
+              </div>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <button className="button good" onClick={handleCreateModel} disabled={busy || !modelVersion.trim() || !modelPath.trim()}>
+                {busy ? 'Saving...' : 'Create Model'}
+              </button>
+            </div>
+          </div>
+
+          <div className="settings-group">
+            <h3 style={{ margin: 0 }}>Registered Models</h3>
+            <div className="history-table-container">
+              <table className="inspection-table">
+                <thead>
+                  <tr>
+                    <th>Version</th>
+                    <th>Active</th>
+                    <th>Dataset</th>
+                    <th>Accuracy</th>
+                    <th>Path</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {models.map((model) => (
+                    <tr key={model.id}>
+                      <td>{model.version}</td>
+                      <td>{model.active ? 'Yes' : 'No'}</td>
+                      <td>{model.dataset_size ?? '--'}</td>
+                      <td>{model.accuracy != null ? `${(model.accuracy * 100).toFixed(2)}%` : '--'}</td>
+                      <td>{model.model_path}</td>
+                      <td>
+                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                          <button className="button" onClick={() => handleModelAction('activate', model.version)} disabled={busy || model.active}>Activate</button>
+                          <button className="button" onClick={() => handleModelAction('deactivate', model.version)} disabled={busy || !model.active}>Deactivate</button>
+                          <button className="button" onClick={() => handleModelAction('rollback', model.version)} disabled={busy}>Rollback</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {models.length === 0 && (
+                    <tr><td colSpan={6} style={{ color: '#64748b' }}>No model versions found.</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
       )}
     </div>
   );

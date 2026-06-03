@@ -54,6 +54,22 @@ class ConfigurationService:
                 return row["config_data"]
             return {}
 
+    def reload_config(self, config_key: str | None = None) -> dict[str, Any] | list[dict[str, Any]]:
+        """Reload one configuration or the full catalog from the database."""
+        if config_key is None:
+            return self.list_all_configs()
+        return self.load_config(config_key)
+
+    def get_config_version(self, config_key: str) -> int:
+        """Return the latest stored version for one configuration."""
+        with self._get_connection() as conn:
+            cur = conn.execute(
+                "SELECT COALESCE(MAX(version), 0) AS latest_version FROM config_store WHERE config_key = %s",
+                (config_key,),
+            )
+            row = cur.fetchone()
+            return int(row["latest_version"] or 0) if row else 0
+
     def save_config(
         self,
         config_key: str,

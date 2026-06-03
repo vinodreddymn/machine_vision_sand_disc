@@ -56,7 +56,10 @@ export function ProductionPage() {
           </ErrorBoundary>
 
           <ErrorBoundary>
-            <DecisionDisplay decision={station1?.decision ?? null} />
+            <DecisionDisplay
+              decision={station1?.decision ?? null}
+              confirmationMode={station1?.confirmation_mode ?? null}
+            />
           </ErrorBoundary>
         </div>
 

@@ -16,6 +16,13 @@ export interface ConfigMetadata {
   is_active: boolean;
 }
 
+export interface RuntimeReloadResult {
+  config_key?: string;
+  version?: number;
+  data?: Record<string, any>;
+  configs?: ConfigData[];
+}
+
 export interface AuditLogEntry {
   id: number;
   config_key: string;
@@ -122,6 +129,41 @@ export async function rollbackConfig(
   }
 
   return response.json();
+}
+
+/**
+ * Reload configuration data without restarting the application
+ */
+export async function reloadConfig(configKey?: string): Promise<RuntimeReloadResult> {
+  const query = new URLSearchParams();
+  if (configKey) {
+    query.append('config_key', configKey);
+  }
+
+  const response = await fetch(`${API_BASE}/reload${query.toString() ? `?${query.toString()}` : ''}`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${localStorage.getItem('diskvision_token') || ''}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to reload configuration: ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Get the current version number for a configuration
+ */
+export async function getConfigVersion(configKey: string): Promise<number> {
+  const response = await fetch(`${API_BASE}/${configKey}/version`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch configuration version: ${response.statusText}`);
+  }
+  const data = await response.json();
+  return data.version;
 }
 
 /**

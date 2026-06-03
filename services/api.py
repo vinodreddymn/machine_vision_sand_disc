@@ -8,6 +8,7 @@ import io
 import os
 import time
 from pathlib import Path
+from dataclasses import asdict
 from typing import Any
 import re
 
@@ -18,7 +19,13 @@ from fastapi.responses import FileResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from config.settings import load_tolerances, save_tolerances, SUPPORTED_INSPECTION_MODES
+from config.settings import (
+    load_tolerances,
+    save_tolerances,
+    load_confidence_thresholds,
+    save_confidence_thresholds,
+    SUPPORTED_INSPECTION_MODES,
+)
 from config.settings import POSTGRES_DSN
 from config.settings import load_security_config
 from config.settings import load_notifications_config
@@ -33,6 +40,7 @@ from services.notifications import (
     EmailNotificationChannel,
     TelegramNotificationChannel,
 )
+from dataset.exporter import DatasetExporter
 from disk_vision_inspector.config_service.settings import RuntimeSettings
 from services.calibration.validation import validate_calibration
 from services.security import (
@@ -53,6 +61,12 @@ from storage.service import InspectionStorageService
 class LabelRequest(BaseModel):
     operator_label: str
     station: str = "S1"
+
+
+class OverrideLabelRequest(BaseModel):
+    operator_label: str
+    station: str = "S1"
+    override_reason: str | None = None
 
 
 class StartPartRequest(BaseModel):
@@ -86,6 +100,30 @@ class CreateUserRequest(BaseModel):
     password: str
     role: str = ROLE_OPERATOR
     active: bool = True
+
+
+class RuntimeCommandRequest(BaseModel):
+    requested_by: str | None = None
+
+
+class ModelRegistryRequest(BaseModel):
+    version: str
+    training_date: str | None = None
+    dataset_size: int | None = None
+    accuracy: float | None = None
+    active: bool = False
+    notes: str | None = None
+    model_path: str
+
+
+class DatasetExportRequest(BaseModel):
+    export_root: str | None = None
+
+
+class ConfidenceThresholdRequest(BaseModel):
+    high_confidence: float
+    medium_confidence: float
+    low_confidence: float = 0.0
 
 
 def _build_default_engine() -> InspectionEngine:
@@ -294,6 +332,51 @@ def create_app(engine: InspectionEngine | None = None) -> FastAPI:
             )
         return out
 
+    @app.get("/api/audit/events")
+    def unified_audit_events(
+        limit: int = 200,
+        _: dict[str, Any] = Depends(_require_role(ROLE_ADMIN)),
+    ) -> list[dict[str, Any]]:
+        """Return a merged audit timeline across configuration, models, labels, and system actions."""
+        if not engine.storage_available or engine.storage is None:
+            raise HTTPException(status_code=503, detail="Storage is offline")
+        system_rows = engine.storage.list_audit_logs(limit=limit)
+        config_rows = config_service.get_audit_log(limit=limit)
+        events: list[dict[str, Any]] = []
+        for row in system_rows:
+            created_at = row.get("created_at")
+            events.append(
+                {
+                    "source": "SYSTEM",
+                    "timestamp": created_at.isoformat() if hasattr(created_at, "isoformat") else str(created_at),
+                    "actor": row.get("actor"),
+                    "action": row.get("action"),
+                    "resource": row.get("resource"),
+                    "message": row.get("message"),
+                    "details": row.get("details"),
+                }
+            )
+        for row in config_rows:
+            changed_at = row.get("changed_at")
+            events.append(
+                {
+                    "source": "CONFIG",
+                    "timestamp": changed_at.isoformat() if hasattr(changed_at, "isoformat") else str(changed_at),
+                    "actor": row.get("changed_by"),
+                    "action": row.get("action"),
+                    "resource": row.get("config_key"),
+                    "message": row.get("reason") or f"{row.get('action')} {row.get('config_key')}",
+                    "details": {
+                        "version_number": row.get("version_number"),
+                        "old_value": row.get("old_value"),
+                        "new_value": row.get("new_value"),
+                        "ip_address": row.get("ip_address"),
+                    },
+                }
+            )
+        events.sort(key=lambda item: item.get("timestamp", ""), reverse=True)
+        return events[:limit]
+
     @app.get("/api/cameras")
     def cameras() -> list[dict[str, Any]]:
         return engine.camera_status()
@@ -306,6 +389,62 @@ def create_app(engine: InspectionEngine | None = None) -> FastAPI:
     def station1() -> dict[str, Any]:
         return engine.station_status("S1")
 
+    @app.get("/api/runtime/state")
+    def runtime_state() -> dict[str, Any]:
+        return engine.runtime_controller.as_dict()
+
+    @app.post("/api/runtime/start")
+    def runtime_start(request: RuntimeCommandRequest | None = None) -> dict[str, Any]:
+        payload = request or RuntimeCommandRequest()
+        engine.runtime_controller.start(requested_by=payload.requested_by or "API")
+        engine.start()
+        return engine.runtime_controller.as_dict()
+
+    @app.post("/api/runtime/stop")
+    def runtime_stop(request: RuntimeCommandRequest | None = None) -> dict[str, Any]:
+        payload = request or RuntimeCommandRequest()
+        engine.runtime_controller.stop(requested_by=payload.requested_by or "API")
+        engine.stop()
+        return engine.runtime_controller.as_dict()
+
+    @app.post("/api/runtime/reset")
+    def runtime_reset(request: RuntimeCommandRequest | None = None) -> dict[str, Any]:
+        payload = request or RuntimeCommandRequest()
+        engine.runtime_controller.reset(requested_by=payload.requested_by or "API")
+        engine.reset_part()
+        return engine.runtime_controller.as_dict()
+
+    @app.get("/api/plc/status")
+    def plc_status() -> dict[str, Any]:
+        return asdict(engine.plc.read_status())
+
+    @app.post("/api/plc/command/{command}")
+    def plc_command(command: str, request: RuntimeCommandRequest | None = None) -> dict[str, Any]:
+        payload = request or RuntimeCommandRequest()
+        command_name = command.strip().lower()
+        if command_name not in {
+            "start_request",
+            "stop_request",
+            "reset_request",
+            "reload_config_request",
+            "confirm_label_request",
+            "override_label_request",
+        }:
+            raise HTTPException(status_code=404, detail=f"Unknown PLC command: {command}")
+        handler = getattr(engine.plc, command_name, None)
+        if not callable(handler):
+            raise HTTPException(status_code=501, detail=f"PLC command not supported: {command}")
+        handler()
+        if command_name == "reload_config_request":
+            engine.runtime_controller.request_reload_config(requested_by=payload.requested_by or "API")
+        elif command_name == "start_request":
+            engine.runtime_controller.ready(requested_by=payload.requested_by or "API")
+        elif command_name == "stop_request":
+            engine.runtime_controller.stop(requested_by=payload.requested_by or "API")
+        elif command_name == "reset_request":
+            engine.runtime_controller.reset(requested_by=payload.requested_by or "API")
+        return {"status": "success", "command": command_name, "plc": asdict(engine.plc.read_status())}
+
     @app.get("/api/config/tolerances")
     def get_tolerances() -> dict[str, Any]:
         return load_tolerances()
@@ -317,6 +456,22 @@ def create_app(engine: InspectionEngine | None = None) -> FastAPI:
         except Exception as error:
             raise HTTPException(status_code=400, detail=str(error)) from error
         return {"status": "success"}
+
+    @app.get("/api/config/confidence-thresholds")
+    def get_confidence_thresholds() -> dict[str, Any]:
+        return load_confidence_thresholds()
+
+    @app.post("/api/config/confidence-thresholds")
+    def update_confidence_thresholds(
+        thresholds: ConfidenceThresholdRequest,
+        _: dict[str, Any] = Depends(_require_role(ROLE_ADMIN)),
+    ) -> dict[str, Any]:
+        if not (0.0 <= thresholds.low_confidence <= thresholds.medium_confidence <= thresholds.high_confidence <= 1.0):
+            raise HTTPException(status_code=400, detail="Confidence thresholds must satisfy low <= medium <= high and stay within 0..1")
+        payload = thresholds.model_dump()
+        save_confidence_thresholds(payload)
+        engine.confidence_thresholds = payload
+        return {"status": "success", "thresholds": payload}
 
     @app.post("/api/config/mode")
     def set_mode(request: ModeRequest, _: dict[str, Any] = Depends(_require_role(ROLE_SUPERVISOR))) -> dict[str, str]:
@@ -336,6 +491,124 @@ def create_app(engine: InspectionEngine | None = None) -> FastAPI:
             return config_service.list_all_configs()
         except Exception as error:
             raise HTTPException(status_code=500, detail=str(error)) from error
+
+    @app.post("/api/config/reload")
+    def reload_config(config_key: str | None = None) -> dict[str, Any]:
+        """Reload configuration data from the database without restarting the process."""
+        try:
+            reloaded = config_service.reload_config(config_key)
+            if config_key:
+                try:
+                    engine.storage.write_audit_log(
+                        actor="system",
+                        action="CONFIG_RELOAD",
+                        resource="config_store",
+                        message=f"Reloaded configuration {config_key}",
+                        details={"config_key": config_key, "version": config_service.get_config_version(config_key)},
+                    )
+                except Exception:
+                    pass
+                engine.runtime_controller.acknowledge_reload_config(requested_by="API")
+                engine.runtime_controller.set_config_version(config_service.get_config_version(config_key))
+                return {
+                    "config_key": config_key,
+                    "version": config_service.get_config_version(config_key),
+                    "data": reloaded,
+                }
+            return {"configs": reloaded}
+        except Exception as error:
+            raise HTTPException(status_code=500, detail=str(error)) from error
+
+    @app.get("/api/config/{config_key}/version")
+    def get_config_version(config_key: str) -> dict[str, Any]:
+        """Return the latest stored version number for one configuration."""
+        try:
+            return {"config_key": config_key, "version": config_service.get_config_version(config_key)}
+        except Exception as error:
+            raise HTTPException(status_code=500, detail=str(error)) from error
+
+    @app.get("/api/models")
+    def list_models(limit: int = 200, _: dict[str, Any] = Depends(_require_role(ROLE_ADMIN))) -> list[dict[str, Any]]:
+        if not engine.storage_available or engine.storage is None:
+            raise HTTPException(status_code=503, detail="Storage is offline")
+        return engine.storage.list_models(limit=limit)
+
+    @app.post("/api/models")
+    def create_model(request: ModelRegistryRequest, _: dict[str, Any] = Depends(_require_role(ROLE_ADMIN))) -> dict[str, Any]:
+        if not engine.storage_available or engine.storage is None:
+            raise HTTPException(status_code=503, detail="Storage is offline")
+        model_id = engine.storage.create_model(payload=request.model_dump())
+        try:
+            engine.storage.write_audit_log(
+                actor="admin",
+                action="MODEL_CREATE",
+                resource="model_registry",
+                message=f"Created model {request.version}",
+                details=request.model_dump(),
+            )
+        except Exception:
+            pass
+        return {"status": "success", "id": model_id}
+
+    @app.post("/api/models/{version}/activate")
+    def activate_model(version: str, _: dict[str, Any] = Depends(_require_role(ROLE_ADMIN))) -> dict[str, Any]:
+        if not engine.storage_available or engine.storage is None:
+            raise HTTPException(status_code=503, detail="Storage is offline")
+        if not engine.storage.activate_model(version):
+            raise HTTPException(status_code=404, detail="Model not found")
+        try:
+            engine.storage.write_audit_log(
+                actor="admin",
+                action="MODEL_ACTIVATE",
+                resource="model_registry",
+                message=f"Activated model {version}",
+                details={"version": version},
+            )
+        except Exception:
+            pass
+        return {"status": "success", "version": version, "active": True}
+
+    @app.post("/api/models/{version}/deactivate")
+    def deactivate_model(version: str, _: dict[str, Any] = Depends(_require_role(ROLE_ADMIN))) -> dict[str, Any]:
+        if not engine.storage_available or engine.storage is None:
+            raise HTTPException(status_code=503, detail="Storage is offline")
+        if not engine.storage.deactivate_model(version):
+            raise HTTPException(status_code=404, detail="Model not found")
+        try:
+            engine.storage.write_audit_log(
+                actor="admin",
+                action="MODEL_DEACTIVATE",
+                resource="model_registry",
+                message=f"Deactivated model {version}",
+                details={"version": version},
+            )
+        except Exception:
+            pass
+        return {"status": "success", "version": version, "active": False}
+
+    @app.post("/api/models/{version}/rollback")
+    def rollback_model(version: str, _: dict[str, Any] = Depends(_require_role(ROLE_ADMIN))) -> dict[str, Any]:
+        if not engine.storage_available or engine.storage is None:
+            raise HTTPException(status_code=503, detail="Storage is offline")
+        if not engine.storage.rollback_model(version):
+            raise HTTPException(status_code=404, detail="Model not found")
+        try:
+            engine.storage.write_audit_log(
+                actor="admin",
+                action="MODEL_ROLLBACK",
+                resource="model_registry",
+                message=f"Rolled back active model to {version}",
+                details={"version": version},
+            )
+        except Exception:
+            pass
+        return {"status": "success", "version": version}
+
+    @app.post("/api/dataset/export")
+    def export_dataset(request: DatasetExportRequest | None = None, _: dict[str, Any] = Depends(_require_role(ROLE_ADMIN))) -> dict[str, Any]:
+        exporter = DatasetExporter(export_root=Path(request.export_root) if request and request.export_root else Path("dataset_export"))
+        root = exporter.export_generic()
+        return {"status": "success", "export_root": str(root)}
 
 
     @app.get("/api/config/audit-log")
@@ -382,7 +655,7 @@ def create_app(engine: InspectionEngine | None = None) -> FastAPI:
     @app.post("/api/config/{config_key}")
     def save_config(
         config_key: str,
-        config_data: dict[str, Any],
+        payload: dict[str, Any],
         description: str | None = None,
         reason: str | None = None,
         _: dict[str, Any] = Depends(_require_role(ROLE_ADMIN))
@@ -391,13 +664,28 @@ def create_app(engine: InspectionEngine | None = None) -> FastAPI:
         try:
             user = _
             updated_by = user.get("sub", "system") if user else "system"
-            return config_service.save_config(
+            config_data = {key: value for key, value in payload.items() if key not in {"description", "reason"}}
+            description = description or str(payload.get("description") or "") or None
+            reason = reason or str(payload.get("reason") or "") or None
+            saved = config_service.save_config(
                 config_key,
                 config_data,
                 updated_by=updated_by,
                 description=description,
                 reason=reason
             )
+            engine.runtime_controller.set_config_version(int(saved.get("version", 0)))
+            try:
+                engine.storage.write_audit_log(
+                    actor=updated_by,
+                    action="CONFIG_SAVE",
+                    resource="config_store",
+                    message=f"Saved configuration {config_key}",
+                    details={"config_key": config_key, "version": saved.get("version"), "description": description, "reason": reason},
+                )
+            except Exception:
+                pass
+            return saved
         except Exception as error:
             raise HTTPException(status_code=400, detail=str(error)) from error
 
@@ -413,6 +701,7 @@ def create_app(engine: InspectionEngine | None = None) -> FastAPI:
     def rollback_config(
         config_key: str,
         version: int,
+        payload: dict[str, Any] | None = None,
         reason: str | None = None,
         _: dict[str, Any] = Depends(_require_role(ROLE_ADMIN))
     ) -> dict[str, Any]:
@@ -420,12 +709,26 @@ def create_app(engine: InspectionEngine | None = None) -> FastAPI:
         try:
             user = _
             rolled_back_by = user.get("sub", "system") if user else "system"
-            return config_service.rollback_config(
+            if payload:
+                reason = reason or str(payload.get("reason") or "") or None
+            rolled_back = config_service.rollback_config(
                 config_key,
                 version,
                 rolled_back_by=rolled_back_by,
                 reason=reason
             )
+            engine.runtime_controller.set_config_version(int(rolled_back.get("version", 0)))
+            try:
+                engine.storage.write_audit_log(
+                    actor=rolled_back_by,
+                    action="CONFIG_ROLLBACK",
+                    resource="config_store",
+                    message=f"Rolled back configuration {config_key} to v{version}",
+                    details={"config_key": config_key, "target_version": version, "new_version": rolled_back.get("version"), "reason": reason},
+                )
+            except Exception:
+                pass
+            return rolled_back
         except Exception as error:
             raise HTTPException(status_code=400, detail=str(error)) from error
 
@@ -487,6 +790,26 @@ def create_app(engine: InspectionEngine | None = None) -> FastAPI:
             "database_write_failures": snapshot.get("database_write_failures"),
             "storage_status": "ONLINE" if engine.storage_available else "OFFLINE",
             "timestamp": snapshot.get("timestamp"),
+        }
+
+    @app.get("/api/system/diagnostics")
+    def system_diagnostics() -> dict[str, Any]:
+        model_rows = []
+        try:
+            if engine.storage_available and engine.storage is not None:
+                model_rows = engine.storage.list_models(limit=1)
+        except Exception:
+            model_rows = []
+        latest_model = model_rows[0] if model_rows else None
+        return {
+            "database": "ONLINE" if engine.storage_available and engine.storage and engine.storage.health_query() else "OFFLINE",
+            "camera": engine.camera_source.name if engine.camera_source is not None else "UNKNOWN",
+            "plc": "ONLINE" if engine.plc is not None else "OFFLINE",
+            "storage": "ONLINE" if engine.storage_available else "OFFLINE",
+            "model": "ONLINE" if latest_model else "NO_ACTIVE_MODEL",
+            "model_version": latest_model.get("version") if latest_model else None,
+            "config_version": engine.runtime_controller.as_dict().get("config_version"),
+            "inspection_runtime": engine.runtime_controller.as_dict(),
         }
 
     @app.get("/api/system/devices")
@@ -574,7 +897,7 @@ def create_app(engine: InspectionEngine | None = None) -> FastAPI:
     @app.post("/api/label")
     def label(request: LabelRequest) -> dict[str, str]:
         try:
-            saved = engine.confirm_label(request.operator_label, station=request.station)
+            saved = engine.confirm_label(request.operator_label, station=request.station, label_source="WEB_CONFIRM")
         except Exception as error:  # noqa: BLE001 - API reports operator-safe error text
             raise HTTPException(status_code=409, detail=str(error)) from error
         return {"metadata_path": str(saved.metadata_path)}
@@ -582,6 +905,18 @@ def create_app(engine: InspectionEngine | None = None) -> FastAPI:
     @app.post("/api/operator-label")
     def operator_label(request: LabelRequest) -> dict[str, str]:
         return label(request)
+
+    @app.post("/api/label/override")
+    def label_override(request: OverrideLabelRequest) -> dict[str, str]:
+        try:
+            saved = engine.override_label(
+                request.operator_label,
+                station=request.station,
+                override_reason=request.override_reason,
+            )
+        except Exception as error:  # noqa: BLE001 - API reports operator-safe error text
+            raise HTTPException(status_code=409, detail=str(error)) from error
+        return {"metadata_path": str(saved.metadata_path)}
 
     @app.post("/api/upload")
     async def upload_inspection(station: str = "S1", file: UploadFile = File(...)) -> dict[str, Any]:

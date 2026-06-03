@@ -98,8 +98,76 @@ CREATE TABLE IF NOT EXISTS dataset_label_records (
     metadata_path TEXT NOT NULL
 );
 
+ALTER TABLE IF EXISTS dataset_label_records
+    ADD COLUMN IF NOT EXISTS prediction TEXT;
+
+ALTER TABLE IF EXISTS dataset_label_records
+    ADD COLUMN IF NOT EXISTS label_source TEXT;
+
+ALTER TABLE IF EXISTS dataset_label_records
+    ADD COLUMN IF NOT EXISTS override_reason TEXT;
+
+ALTER TABLE IF EXISTS dataset_label_records
+    ADD COLUMN IF NOT EXISTS confidence NUMERIC(6, 4);
+
 CREATE INDEX IF NOT EXISTS idx_dataset_label_records_part
     ON dataset_label_records (physical_part_id, labeled_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_dataset_label_records_label_source
+    ON dataset_label_records (label_source);
+
+CREATE TABLE IF NOT EXISTS inspection_runtime_state (
+    id BIGSERIAL PRIMARY KEY,
+    state TEXT NOT NULL,
+    last_command TEXT,
+    requested_by TEXT,
+    fault_reason TEXT,
+    config_version INTEGER,
+    reload_requested BOOLEAN NOT NULL DEFAULT FALSE,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_inspection_runtime_state_updated_at
+    ON inspection_runtime_state (updated_at DESC);
+
+CREATE TABLE IF NOT EXISTS model_registry (
+    id BIGSERIAL PRIMARY KEY,
+    version TEXT NOT NULL UNIQUE,
+    training_date TIMESTAMPTZ,
+    dataset_size BIGINT,
+    accuracy NUMERIC(6, 4),
+    active BOOLEAN NOT NULL DEFAULT FALSE,
+    notes TEXT,
+    model_path TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_model_registry_active
+    ON model_registry (active, updated_at DESC);
+
+CREATE TABLE IF NOT EXISTS plc_command_log (
+    id BIGSERIAL PRIMARY KEY,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    command TEXT NOT NULL,
+    source TEXT,
+    requested_by TEXT,
+    details JSONB
+);
+
+CREATE INDEX IF NOT EXISTS idx_plc_command_log_created_at
+    ON plc_command_log (created_at DESC);
+
+CREATE TABLE IF NOT EXISTS dataset_exports (
+    id BIGSERIAL PRIMARY KEY,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    export_root TEXT NOT NULL,
+    record_count BIGINT NOT NULL DEFAULT 0,
+    notes TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_dataset_exports_created_at
+    ON dataset_exports (created_at DESC);
 
 CREATE OR REPLACE FUNCTION ensure_inspection_records_partition(partition_day DATE)
 RETURNS TEXT
@@ -668,3 +736,105 @@ class PostgresInspectionRepository:
                     (limit,),
                 )
                 return cursor.fetchall()
+
+    def save_dataset_label(self, *, payload: dict[str, Any]) -> int:
+        with self._connect() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    INSERT INTO dataset_label_records (
+                        physical_part_id,
+                        station_code,
+                        serial_number,
+                        system_prediction,
+                        prediction,
+                        operator_label,
+                        label_source,
+                        override_reason,
+                        anomaly_score,
+                        confidence,
+                        metadata_path
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    RETURNING id
+                    """,
+                    (
+                        payload.get("physical_part_id"),
+                        payload.get("station_code"),
+                        payload.get("serial_number"),
+                        payload.get("system_prediction"),
+                        payload.get("prediction") or payload.get("system_prediction"),
+                        payload.get("operator_label"),
+                        payload.get("label_source"),
+                        payload.get("override_reason"),
+                        payload.get("anomaly_score"),
+                        payload.get("confidence"),
+                        payload.get("metadata_path"),
+                    ),
+                )
+                return int(cursor.fetchone()[0])
+
+    def list_dataset_labels(self, limit: int = 200) -> list[dict[str, Any]]:
+        with self._connect(row_factory=dict_row) as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT *
+                    FROM dataset_label_records
+                    ORDER BY labeled_at DESC, id DESC
+                    LIMIT %s
+                    """,
+                    (limit,),
+                )
+                return cursor.fetchall()
+
+    def create_model(self, *, payload: dict[str, Any]) -> int:
+        with self._connect() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    INSERT INTO model_registry (version, training_date, dataset_size, accuracy, active, notes, model_path)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    RETURNING id
+                    """,
+                    (
+                        payload.get("version"),
+                        payload.get("training_date"),
+                        payload.get("dataset_size"),
+                        payload.get("accuracy"),
+                        bool(payload.get("active", False)),
+                        payload.get("notes"),
+                        payload.get("model_path"),
+                    ),
+                )
+                return int(cursor.fetchone()[0])
+
+    def list_models(self, limit: int = 200) -> list[dict[str, Any]]:
+        with self._connect(row_factory=dict_row) as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT id, version, training_date, dataset_size, accuracy, active, notes, model_path, created_at, updated_at
+                    FROM model_registry
+                    ORDER BY updated_at DESC, id DESC
+                    LIMIT %s
+                    """,
+                    (limit,),
+                )
+                return cursor.fetchall()
+
+    def activate_model(self, version: str) -> bool:
+        with self._connect() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute("UPDATE model_registry SET active = FALSE")
+                cursor.execute("UPDATE model_registry SET active = TRUE WHERE version = %s", (version,))
+                return cursor.rowcount > 0
+
+    def deactivate_model(self, version: str) -> bool:
+        with self._connect() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute("UPDATE model_registry SET active = FALSE WHERE version = %s", (version,))
+                return cursor.rowcount > 0
+
+    def rollback_model(self, version: str) -> bool:
+        return self.activate_model(version)

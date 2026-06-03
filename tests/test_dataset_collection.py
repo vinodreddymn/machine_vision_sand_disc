@@ -25,6 +25,7 @@ def test_dataset_collector_saves_full_roi_overlay_and_metadata(tmp_path) -> None
         inspection_result=result,
         system_prediction=assisted_prediction(result),
         operator_label="GOOD",
+        label_source="WEB_CONFIRM",
         anomaly_score=anomaly_score(result),
     )
 
@@ -32,6 +33,10 @@ def test_dataset_collector_saves_full_roi_overlay_and_metadata(tmp_path) -> None
     assert saved.roi_path is not None and saved.roi_path.exists()
     assert saved.overlay_path is not None and saved.overlay_path.exists()
     assert saved.metadata_path.exists()
+
+    metadata = saved.metadata_path.read_text(encoding="utf-8")
+    assert '"label_source": "WEB_CONFIRM"' in metadata
+    assert '"prediction": "GOOD"' in metadata
 
     stats = LabelManager(tmp_path).stats()
     assert stats.total_good == 1
@@ -53,6 +58,9 @@ def test_operator_override_counts_as_correction(tmp_path) -> None:
         inspection_result=result,
         system_prediction="GOOD",
         operator_label="DEFECTIVE",
+        label_source="WEB_OVERRIDE",
+        override_reason="FALSE_SCRATCH",
+        confidence=0.2,
     )
 
     stats = LabelManager(tmp_path).stats()
@@ -74,9 +82,11 @@ def test_dataset_exporter_writes_csv_and_labels(tmp_path) -> None:
         inspection_result=result,
         system_prediction="GOOD",
         operator_label="GOOD",
+        label_source="WEB_CONFIRM",
     )
 
     export_root = DatasetExporter(tmp_path / "dataset", tmp_path / "export").export_generic()
 
     assert (export_root / "metadata.csv").exists()
     assert list((export_root / "labels").glob("*.txt"))
+    assert "label_source" in (export_root / "metadata.csv").read_text(encoding="utf-8")

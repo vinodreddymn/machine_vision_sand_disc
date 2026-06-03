@@ -18,6 +18,7 @@ STORAGE_ENV_FILE = STORAGE_DIR / ".env"
 TOLERANCES_FILE = CONFIG_DIR / "tolerances.json"
 HEALTH_THRESHOLDS_FILE = CONFIG_DIR / "health_thresholds.json"
 IMAGE_RETENTION_FILE = CONFIG_DIR / "image_retention.json"
+CONFIDENCE_THRESHOLDS_FILE = CONFIG_DIR / "confidence_thresholds.json"
 SECURITY_FILE = CONFIG_DIR / "security.json"
 NOTIFICATIONS_FILE = CONFIG_DIR / "notifications.json"
 KIOSK_MODE = False  # Set to True to enable kiosk mode (full-screen, no cursor)
@@ -95,3 +96,21 @@ def load_notifications_config() -> dict[str, Any]:
     """Load notification delivery settings from JSON config."""
     with NOTIFICATIONS_FILE.open("r", encoding="utf-8") as file:
         return json.load(file)
+
+
+def load_confidence_thresholds() -> dict[str, Any]:
+    """Load operator confirmation thresholds from JSON config."""
+    if not CONFIDENCE_THRESHOLDS_FILE.exists():
+        return {
+            "high_confidence": 0.85,
+            "medium_confidence": 0.55,
+            "low_confidence": 0.0,
+        }
+    with CONFIDENCE_THRESHOLDS_FILE.open("r", encoding="utf-8") as file:
+        return json.load(file)
+
+
+def save_confidence_thresholds(thresholds: dict[str, Any]) -> None:
+    """Persist operator confirmation thresholds to JSON config."""
+    with CONFIDENCE_THRESHOLDS_FILE.open("w", encoding="utf-8") as file:
+        json.dump(thresholds, file, indent=2)

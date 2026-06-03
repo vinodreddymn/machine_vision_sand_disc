@@ -43,6 +43,13 @@ class InspectionRepository(Protocol):
     def write_audit_log(self, *, actor: str | None, action: str, resource: str | None, message: str, details: dict[str, Any] | None) -> int: ...
     def list_users(self, limit: int = 200) -> list[dict]: ...
     def list_audit_logs(self, limit: int = 200) -> list[dict]: ...
+    def save_dataset_label(self, *, payload: dict[str, Any]) -> int: ...
+    def list_dataset_labels(self, limit: int = 200) -> list[dict]: ...
+    def create_model(self, *, payload: dict[str, Any]) -> int: ...
+    def list_models(self, limit: int = 200) -> list[dict]: ...
+    def activate_model(self, version: str) -> bool: ...
+    def deactivate_model(self, version: str) -> bool: ...
+    def rollback_model(self, version: str) -> bool: ...
 
 
 class InspectionStorageService:
@@ -176,3 +183,24 @@ class InspectionStorageService:
 
     def list_audit_logs(self, limit: int = 200) -> list[dict]:
         return self.repository.list_audit_logs(limit)
+
+    def save_dataset_label(self, *, payload: dict[str, Any]) -> int:
+        return self.repository.save_dataset_label(payload=payload)
+
+    def list_dataset_labels(self, limit: int = 200) -> list[dict]:
+        return self.repository.list_dataset_labels(limit)
+
+    def create_model(self, *, payload: dict[str, Any]) -> int:
+        return self.repository.create_model(payload=payload)
+
+    def list_models(self, limit: int = 200) -> list[dict]:
+        return self.repository.list_models(limit)
+
+    def activate_model(self, version: str) -> bool:
+        return self.repository.activate_model(version)
+
+    def deactivate_model(self, version: str) -> bool:
+        return self.repository.deactivate_model(version)
+
+    def rollback_model(self, version: str) -> bool:
+        return self.repository.rollback_model(version)

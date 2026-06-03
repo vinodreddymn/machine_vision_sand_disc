@@ -71,6 +71,57 @@ def test_config_endpoints(tmp_path) -> None:
     assert mode_res_invalid.status_code == 400
 
 
+def test_runtime_and_plc_endpoints(tmp_path) -> None:
+    client = _client(tmp_path)
+
+    state = client.get("/api/runtime/state")
+    assert state.status_code == 200
+    assert state.json()["state"] == "IDLE"
+
+    plc_status = client.get("/api/plc/status")
+    assert plc_status.status_code == 200
+    assert "heartbeat_bit" in plc_status.json()
+
+    plc_command = client.post("/api/plc/command/start_request", json={"requested_by": "tester"})
+    assert plc_command.status_code == 200
+    assert plc_command.json()["command"] == "start_request"
+
+
+def test_config_reload_and_version_endpoints(tmp_path, monkeypatch) -> None:
+    class FakeConfigService:
+        def __init__(self) -> None:
+            self.calls: list[str] = []
+
+        def list_all_configs(self):
+            return [{"config_key": "tolerances", "data": {"threshold": 1}, "versions": []}]
+
+        def reload_config(self, config_key=None):
+            self.calls.append(f"reload:{config_key}")
+            if config_key is None:
+                return self.list_all_configs()
+            return {"threshold": 2}
+
+        def get_config_version(self, config_key):
+            self.calls.append(f"version:{config_key}")
+            return 9
+
+    fake_service = FakeConfigService()
+    monkeypatch.setattr("services.api.get_config_service", lambda: fake_service)
+
+    client = _client(tmp_path)
+    reload_all = client.post("/api/config/reload")
+    assert reload_all.status_code == 200
+    assert "configs" in reload_all.json()
+
+    reload_one = client.post("/api/config/reload?config_key=tolerances")
+    assert reload_one.status_code == 200
+    assert reload_one.json()["version"] == 9
+
+    version = client.get("/api/config/tolerances/version")
+    assert version.status_code == 200
+    assert version.json()["version"] == 9
+
+
 def test_video_upload_and_camera_reset(tmp_path) -> None:
     client = _client(tmp_path)
     
@@ -126,3 +177,12 @@ def test_system_health_alarm_endpoints(tmp_path) -> None:
     trends = client.get("/api/system/history")
     assert trends.status_code == 200
     assert isinstance(trends.json(), list)
+
+
+def test_startup_diagnostics_endpoint(tmp_path) -> None:
+    client = _client(tmp_path)
+
+    diag = client.get("/api/system/startup-diagnostics")
+    assert diag.status_code == 200
+    body = diag.json()
+    assert set(body.keys()) >= {"database", "camera", "plc", "storage", "model"}

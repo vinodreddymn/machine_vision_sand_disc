@@ -38,8 +38,13 @@ class DatasetExporter:
                     "part_id",
                     "station",
                     "operator_label",
+                    "label_source",
+                    "override_reason",
                     "system_prediction",
+                    "prediction",
+                    "confidence",
                     "anomaly_score",
+                    "timestamp",
                     "image",
                     "roi",
                     "overlay",
@@ -60,8 +65,13 @@ class DatasetExporter:
                         "part_id": record.get("part_id"),
                         "station": record.get("station"),
                         "operator_label": record.get("operator_label"),
+                        "label_source": record.get("label_source"),
+                        "override_reason": record.get("override_reason"),
                         "system_prediction": record.get("system_prediction"),
+                        "prediction": record.get("prediction"),
+                        "confidence": record.get("confidence"),
                         "anomaly_score": record.get("anomaly_score"),
+                        "timestamp": record.get("timestamp"),
                         "image": str(copied.get("full", "")),
                         "roi": str(copied.get("roi", "")),
                         "overlay": str(copied.get("overlay", "")),
@@ -78,8 +88,11 @@ class DatasetExporter:
             ("roi_image_path", "roi"),
             ("overlay_image_path", "overlay"),
         ):
-            source = Path(str(record.get(key) or ""))
-            if not source.exists():
+            raw_path = str(record.get(key) or "").strip()
+            if not raw_path:
+                continue
+            source = Path(raw_path)
+            if not source.exists() or not source.is_file():
                 continue
             destination = images_dir / f"{export_id}_{suffix}{source.suffix}"
             shutil.copy2(source, destination)

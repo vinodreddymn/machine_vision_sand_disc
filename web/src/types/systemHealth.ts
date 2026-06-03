@@ -54,6 +54,17 @@ export interface ServiceStatus {
   timestamp?: number | null;
 }
 
+export interface StartupDiagnostics {
+  database: string;
+  camera: string;
+  plc: string;
+  storage: string;
+  model: string;
+  model_version?: string | null;
+  config_version?: number | null;
+  inspection_runtime?: Record<string, unknown> | null;
+}
+
 export interface Alarm {
   id: number;
   timestamp: string;

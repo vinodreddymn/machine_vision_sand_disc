@@ -6,6 +6,15 @@ export interface PlcStatus {
   conveyor_status: string;
   reject_actuator: string;
   accept_gate: string;
+  python_running?: boolean;
+  inspection_running?: boolean;
+  camera_healthy?: boolean;
+  database_healthy?: boolean;
+  plc_connected?: boolean;
+  fault_active?: boolean;
+  heartbeat_bit?: boolean;
+  watchdog_timeout_seconds?: number;
+  last_heartbeat_at?: number | null;
 }
 
 export interface Status {
@@ -17,6 +26,7 @@ export interface Status {
   pending_label: boolean;
   log_count: number;
   camera_name?: string;
+  runtime?: Record<string, unknown>;
 }
 
 // ─── Station Type ─────────────────────────────────────────────────────────────
@@ -38,6 +48,11 @@ export interface Station {
   stream_url: string;
   captured_image_url: string;
   cycle_time_ms: number | null;
+  confirmation_mode?: string | null;
+  patchcore_result?: {
+    anomaly_score: number | null;
+    prediction: string | null;
+  } | null;
 }
 
 // ─── Dataset Metrics sub-type ─────────────────────────────────────────────────

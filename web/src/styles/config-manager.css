@@ -168,6 +168,14 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 24px;
+  gap: 16px;
+}
+
+.config-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .config-header h2 {

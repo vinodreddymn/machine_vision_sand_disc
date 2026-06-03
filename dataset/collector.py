@@ -52,14 +52,19 @@ class DatasetCollector:
         inspection_result: InspectionResult,
         system_prediction: str,
         operator_label: str,
+        label_source: str | None = None,
+        override_reason: str | None = None,
         serial_number: str | None = None,
         camera_source: str | None = None,
         inspected_at: datetime | None = None,
         anomaly_score: float | None = None,
+        confidence: float | None = None,
         inspection_mode: str = MODE_DATA_COLLECTION,
         extra_metadata: dict[str, Any] | None = None,
     ) -> DatasetSaveResult:
         label = self.label_manager.normalize_operator_label(operator_label)
+        normalized_label_source = self.label_manager.normalize_label_source(label_source)
+        normalized_override_reason = self.label_manager.normalize_override_reason(override_reason)
         label_dir = "good" if label == GOOD_LABEL else "defect"
         station_dir = self._station_dir_name(station)
         timestamp = inspected_at or datetime.now().astimezone()
@@ -86,13 +91,17 @@ class DatasetCollector:
             "part_id": part_id,
             "station": self._station_code(station),
             "timestamp": timestamp.isoformat(),
+            "prediction": system_prediction,
             "system_prediction": system_prediction,
             "operator_label": label,
+            "label_source": normalized_label_source,
+            "override_reason": normalized_override_reason,
             "serial_number": serial_number,
             "camera_source": camera_source or source_name,
             "source_name": source_name,
             "inspection_mode": inspection_mode,
             "anomaly_score": anomaly_score,
+            "confidence": confidence,
             "measurements": inspection_result.measurements,
             "defects": inspection_result.defects,
             "full_image_path": str(full_path),
