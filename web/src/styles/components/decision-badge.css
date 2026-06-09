@@ -1,0 +1,58 @@
+/* ── Decision Badges ─────────────────────────────────── */
+
+.decision {
+  min-width: 96px;
+  text-align: center;
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-weight: 900;
+  background: #39434e;
+}
+
+.decision-pass    { background: #0f6b49; color: #e7fff5; }
+.decision-fail    { background: #912929; color: #fff0f0; }
+.decision-waiting { background: #4b5560; color: #f4f7f8; }
+
+/* ── Large Decision Display ──────────────────────────── */
+
+.large-decision-display {
+  padding: 16px;
+  border-radius: 8px;
+  text-align: center;
+  font-size: 28px;
+  font-weight: 900;
+  letter-spacing: 1px;
+}
+
+.large-decision-display.pass {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid #10b981;
+  color: #34d399;
+}
+
+.large-decision-display.fail {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid #ef4444;
+  color: #f87171;
+}
+
+.large-decision-display.waiting {
+  background: rgba(100, 116, 139, 0.15);
+  border: 1px solid #64748b;
+  color: #94a3b8;
+}
+
+/* ── Table Badges ────────────────────────────────────── */
+
+.table-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.table-badge.pass  { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+.table-badge.fail  { background: rgba(239, 68, 68, 0.15);  color: #f87171; }
+.table-badge.prod  { background: rgba(56, 189, 248, 0.15); color: #38bdf8; }
+.table-badge.train { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }

@@ -1,0 +1,89 @@
+/* ── KPI Grid & Cards ────────────────────────────────── */
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(110px, 1fr));
+  gap: 10px;
+}
+
+.kpi {
+  min-height: 84px;
+  background: #20262d;
+  border: 1px solid #39434e;
+  border-left: 4px solid #d6a23a;
+  border-radius: 8px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.kpi span,
+.field span,
+.status-pill span,
+.viewer span {
+  color: #aeb8c1;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.kpi strong {
+  font-size: 30px;
+  line-height: 1;
+}
+
+/* ── Modern KPI Cards ────────────────────────────────── */
+
+.kpi-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.kpi-card {
+  background: #1a1e28;
+  border: 1px solid #252d3d;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  transition: transform 0.2s ease;
+}
+
+.kpi-card:hover {
+  transform: translateY(-2px);
+}
+
+.kpi-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.kpi-icon.blue   { background: rgba(56, 189, 248, 0.12); color: #38bdf8; }
+.kpi-icon.green  { background: rgba(16, 185, 129, 0.12); color: #10b981; }
+.kpi-icon.red    { background: rgba(239, 68, 68, 0.12);  color: #ef4444; }
+.kpi-icon.yellow { background: rgba(245, 158, 11, 0.12); color: #f59e0b; }
+
+.kpi-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.kpi-info span {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.kpi-info strong {
+  font-size: 24px;
+  color: #f8fafc;
+  font-weight: 800;
+}

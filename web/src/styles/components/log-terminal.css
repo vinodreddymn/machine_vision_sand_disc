@@ -1,0 +1,41 @@
+/* ── Log Terminal ────────────────────────────────────── */
+
+.log-terminal {
+  background: #0b0d12;
+  border: 1px solid #232a36;
+  border-radius: 8px;
+  padding: 12px;
+  font-family: Consolas, Monaco, monospace;
+  font-size: 13px;
+  height: 240px;
+  overflow-y: auto;
+  color: #cbd5e1;
+}
+
+.log-terminal p {
+  margin: 0 0 6px 0;
+  line-height: 1.4;
+}
+
+/* ── Event Console (legacy viewer) ──────────────────── */
+
+.event-console {
+  min-height: 220px;
+}
+
+.log-lines {
+  height: 190px;
+  overflow: auto;
+  margin-top: 10px;
+  background: #0b0d10;
+  border: 1px solid #343d47;
+  border-radius: 6px;
+  padding: 8px;
+}
+
+.log-lines p {
+  margin: 0 0 5px;
+  color: #c8d0d7;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 12px;
+}

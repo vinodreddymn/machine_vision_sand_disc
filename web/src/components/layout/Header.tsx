@@ -8,7 +8,7 @@ import { computeYieldRate } from '../../utils/calculations';
 import { API } from '../../utils/constants';
 
 type Tab = 'production' | 'training' | 'history' | 'system' | 'admin' | 'settings';
-type SettingsTab = 'calibration' | 'tolerances' | 'configurations';
+type SettingsTab = 'calibration' | 'tolerances' | 'configurations' | 'camera';
 
 interface HeaderProps {
   activeTab: Tab;
@@ -25,6 +25,8 @@ function getSubtitle(activeTab: Tab, settingsTab: SettingsTab): string {
     case 'settings':
       return settingsTab === 'calibration'
         ? 'One-Time Camera Calibration — px → mm'
+        : settingsTab === 'camera'
+        ? 'Camera Hardware Configuration & Live Feed'
         : 'Inspection Tolerances & Mode Control';
   }
 }
@@ -104,15 +106,7 @@ export const Header = React.memo(function Header({
             <CircleStop size={14} />
             Stop
           </button>
-          <button
-            id="btn-shutdown"
-            className="button danger"
-            onClick={handleShutdown}
-            style={{ height: '36px', minHeight: '36px' }}
-          >
-            <Power size={14} />
-            Shutdown
-          </button>
+       
         </div>
       </div>
     </header>

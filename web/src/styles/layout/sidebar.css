@@ -1,0 +1,426 @@
+/* =========================================================
+   SIDEBAR
+   ========================================================= */
+
+.sidebar {
+  width: 280px;
+  min-width: 280px;
+  height: 100%;
+
+  display: flex;
+  flex-direction: column;
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(17, 24, 39, 0.98),
+      rgba(15, 23, 42, 0.98)
+    );
+
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+
+  overflow: hidden;
+
+  transition:
+    width 0.3s ease,
+    min-width 0.3s ease;
+
+  position: relative;
+  z-index: 50;
+}
+
+/* Decorative glow */
+
+.sidebar::before {
+  content: "";
+
+  position: absolute;
+  top: 0;
+  left: 0;
+
+  width: 2px;
+  height: 100%;
+
+  background: linear-gradient(
+    to bottom,
+    #3b82f6,
+    #10b981,
+    transparent
+  );
+
+  opacity: 0.6;
+}
+
+/* =========================================================
+   COLLAPSED MODE
+   ========================================================= */
+
+.sidebar.collapsed {
+  width: 84px;
+  min-width: 84px;
+}
+
+.sidebar.collapsed .sidebar-brand,
+.sidebar.collapsed .sidebar-label,
+.sidebar.collapsed .sidebar-footer-text {
+  opacity: 0;
+  width: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* =========================================================
+   HEADER
+   ========================================================= */
+
+.sidebar-header {
+  height: 78px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 0 18px;
+
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+
+  flex-shrink: 0;
+}
+
+/* =========================================================
+   LOGO
+   ========================================================= */
+
+.sidebar-logo {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+
+  overflow: hidden;
+}
+
+.logo-container {
+  width: 46px;
+  height: 46px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 14px;
+
+  background:
+    linear-gradient(
+      135deg,
+      rgba(59, 130, 246, 0.18),
+      rgba(16, 185, 129, 0.18)
+    );
+
+  border: 1px solid rgba(255,255,255,0.08);
+
+  flex-shrink: 0;
+}
+
+.logo-container svg {
+  color: #38bdf8;
+}
+
+.sidebar-brand {
+  transition: all 0.25s ease;
+}
+
+.sidebar-brand h1 {
+  margin: 0;
+
+  color: #f8fafc;
+
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.sidebar-brand span {
+  display: block;
+  margin-top: 2px;
+
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+/* =========================================================
+   COLLAPSE BUTTON
+   ========================================================= */
+
+.collapse-btn {
+  width: 36px;
+  height: 36px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: transparent;
+
+  border: none;
+  border-radius: 10px;
+
+  color: #94a3b8;
+
+  cursor: pointer;
+
+  transition: all 0.25s ease;
+}
+
+.collapse-btn:hover {
+  background: rgba(255,255,255,0.06);
+  color: #ffffff;
+}
+
+/* =========================================================
+   NAVIGATION
+   ========================================================= */
+
+.sidebar-nav {
+  flex: 1;
+
+  display: flex;
+  flex-direction: column;
+
+  gap: 6px;
+
+  padding: 14px;
+
+  overflow-y: auto;
+}
+
+/* Custom Scrollbar */
+
+.sidebar-nav::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.15);
+  border-radius: 999px;
+}
+
+/* =========================================================
+   NAVIGATION BUTTON
+   ========================================================= */
+
+.sidebar-button {
+  position: relative;
+
+  display: flex;
+  align-items: center;
+
+  gap: 14px;
+
+  width: 100%;
+
+  padding: 13px 14px;
+
+  border: none;
+  border-radius: 14px;
+
+  background: transparent;
+
+  color: #cbd5e1;
+
+  cursor: pointer;
+
+  transition: all 0.25s ease;
+
+  text-align: left;
+
+  overflow: hidden;
+}
+
+.sidebar-button svg {
+  flex-shrink: 0;
+}
+
+/* Hover */
+
+.sidebar-button:hover {
+  background: rgba(255,255,255,0.06);
+  color: #ffffff;
+
+  transform: translateX(3px);
+}
+
+/* Active */
+
+.sidebar-button.active {
+  color: #ffffff;
+
+  background:
+    linear-gradient(
+      135deg,
+      rgba(37,99,235,0.95),
+      rgba(59,130,246,0.95)
+    );
+
+  box-shadow:
+    0 6px 18px rgba(37,99,235,0.35);
+}
+
+.sidebar-button.active::before {
+  content: "";
+
+  position: absolute;
+
+  left: 0;
+  top: 10px;
+  bottom: 10px;
+
+  width: 4px;
+
+  border-radius: 0 4px 4px 0;
+
+  background: #ffffff;
+}
+
+/* =========================================================
+   LABEL
+   ========================================================= */
+
+.sidebar-label {
+  font-size: 14px;
+  font-weight: 500;
+
+  white-space: nowrap;
+
+  transition: all 0.25s ease;
+}
+
+/* =========================================================
+   FOOTER
+   ========================================================= */
+
+.sidebar-footer {
+  min-height: 70px;
+
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  padding: 16px 18px;
+
+  border-top: 1px solid rgba(255,255,255,0.06);
+
+  flex-shrink: 0;
+}
+
+.sidebar-footer-text {
+  display: flex;
+  flex-direction: column;
+
+  transition: all 0.25s ease;
+}
+
+.sidebar-footer-title {
+  color: #e2e8f0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.sidebar-footer-subtitle {
+  color: #94a3b8;
+  font-size: 11px;
+}
+
+/* =========================================================
+   STATUS INDICATOR
+   ========================================================= */
+
+.status-indicator {
+  width: 12px;
+  height: 12px;
+
+  border-radius: 50%;
+
+  flex-shrink: 0;
+}
+
+.status-indicator.online {
+  background: #22c55e;
+
+  box-shadow:
+    0 0 10px #22c55e,
+    0 0 20px rgba(34,197,94,0.4);
+}
+
+.status-indicator.warning {
+  background: #f59e0b;
+}
+
+.status-indicator.error {
+  background: #ef4444;
+}
+
+/* =========================================================
+   COLLAPSED MODE ADJUSTMENTS
+   ========================================================= */
+
+.sidebar.collapsed .sidebar-button {
+  justify-content: center;
+  padding: 14px;
+}
+
+.sidebar.collapsed .sidebar-footer {
+  justify-content: center;
+}
+
+/* =========================================================
+   TABLET
+   ========================================================= */
+
+@media (max-width: 1024px) {
+
+  .sidebar {
+    width: 100%;
+    min-width: 100%;
+    height: auto;
+
+    border-right: none;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+
+  .sidebar.collapsed {
+    width: 100%;
+    min-width: 100%;
+  }
+
+  .sidebar-nav {
+    flex-direction: row;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  .sidebar-button {
+    min-width: fit-content;
+    white-space: nowrap;
+  }
+}
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 768px) {
+
+  .sidebar-header {
+    padding: 0 14px;
+  }
+
+  .sidebar-nav {
+    padding: 10px;
+  }
+
+  .sidebar-button {
+    padding: 12px;
+  }
+}

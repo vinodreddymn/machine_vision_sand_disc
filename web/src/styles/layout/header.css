@@ -1,0 +1,316 @@
+/* =========================================================
+   HEADER & FOOTER
+   ========================================================= */
+
+.header,
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 0 24px;
+  min-height: 72px;
+
+  background: rgba(17, 24, 39, 0.85);
+
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+
+  position: relative;
+  z-index: 100;
+}
+
+.header {
+  position: sticky;
+  top: 0;
+}
+
+.footer {
+  min-height: 60px;
+  margin-top: auto;
+
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: none;
+
+  justify-content: center;
+
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+/* =========================================================
+   BRAND SECTION
+   ========================================================= */
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+
+  min-width: 320px;
+  max-width: 450px;
+}
+
+.brand-logo {
+  width: 48px;
+  height: 48px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 14px;
+
+  background: linear-gradient(
+    135deg,
+    rgba(16, 185, 129, 0.15),
+    rgba(59, 130, 246, 0.15)
+  );
+
+  border: 1px solid rgba(255, 255, 255, 0.08);
+
+  flex-shrink: 0;
+}
+
+.brand svg {
+  width: 24px;
+  height: 24px;
+  color: #10b981;
+}
+
+.brand-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.brand h1 {
+  margin: 0;
+
+  font-size: 20px;
+  font-weight: 700;
+
+  color: #f8fafc;
+  letter-spacing: 0.4px;
+}
+
+.brand p {
+  margin: 4px 0 0;
+
+  font-size: 13px;
+  color: #94a3b8;
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* =========================================================
+   PANEL TITLES
+   ========================================================= */
+
+.panel h2 {
+  margin: 0;
+
+  font-size: 18px;
+  font-weight: 600;
+
+  color: #f1f5f9;
+}
+
+.station-heading p {
+  margin-top: 6px;
+
+  font-size: 13px;
+  color: #94a3b8;
+}
+
+/* =========================================================
+   STATUS STRIP
+   ========================================================= */
+
+.status-strip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 12px;
+
+  flex: 1;
+  padding: 0 24px;
+
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.status-strip::-webkit-scrollbar {
+  display: none;
+}
+
+/* =========================================================
+   STATUS CHIP
+   ========================================================= */
+
+.status-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  padding: 8px 14px;
+
+  border-radius: 999px;
+
+  background: rgba(255, 255, 255, 0.04);
+
+  border: 1px solid rgba(255, 255, 255, 0.08);
+
+  color: #e2e8f0;
+
+  font-size: 13px;
+  font-weight: 600;
+
+  white-space: nowrap;
+
+  transition: all 0.25s ease;
+}
+
+.status-chip:hover {
+  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.07);
+}
+
+/* =========================================================
+   HEADER ACTIONS
+   ========================================================= */
+
+.header-actions,
+.action-grid,
+.label-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.header-actions {
+  justify-content: flex-end;
+}
+
+/* =========================================================
+   CLOCK DISPLAY
+   ========================================================= */
+
+.header-clock {
+  display: flex;
+  align-items: center;
+
+  padding: 8px 14px;
+
+  border-radius: 12px;
+
+  background: rgba(56, 189, 248, 0.08);
+
+  border: 1px solid rgba(56, 189, 248, 0.2);
+
+  color: #38bdf8;
+
+  font-family: "Consolas", "Courier New", monospace;
+  font-size: 14px;
+  font-weight: 700;
+
+  letter-spacing: 1px;
+
+  white-space: nowrap;
+}
+
+/* =========================================================
+   OEE BADGE
+   ========================================================= */
+
+.oee-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  padding: 8px 14px;
+
+  border-radius: 999px;
+
+  background: rgba(16, 185, 129, 0.12);
+
+  border: 1px solid rgba(16, 185, 129, 0.25);
+
+  color: #10b981;
+
+  font-size: 13px;
+  font-weight: 700;
+
+  white-space: nowrap;
+
+  box-shadow:
+    0 0 12px rgba(16, 185, 129, 0.15),
+    inset 0 0 12px rgba(16, 185, 129, 0.05);
+}
+
+.oee-badge strong {
+  color: #34d399;
+  font-size: 14px;
+}
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 1200px) {
+
+  .header {
+    padding: 14px 20px;
+  }
+
+  .brand {
+    min-width: auto;
+  }
+
+  .status-strip {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+
+  .header {
+    flex-wrap: wrap;
+    gap: 14px;
+    min-height: auto;
+    padding: 16px;
+  }
+
+  .brand {
+    width: 100%;
+  }
+
+  .header-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .brand h1 {
+    font-size: 18px;
+  }
+}
+
+@media (max-width: 480px) {
+
+  .header-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .header-clock,
+  .oee-badge {
+    justify-content: center;
+  }
+}

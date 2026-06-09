@@ -1,0 +1,21 @@
+/* ── Detail Inspector Panel ──────────────────────────── */
+
+.detail-inspector {
+  background: #1a1e28;
+  border: 1px solid #252d3d;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.detail-inspector img {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: contain;
+  background: #090b0f;
+  border: 1px solid #2d3748;
+  border-radius: 8px;
+  margin-top: 8px;
+}

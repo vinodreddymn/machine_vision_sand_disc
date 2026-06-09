@@ -1,0 +1,51 @@
+/* ── Feed Box & Production Feed Viewer ───────────────── */
+
+.production-feed-viewer {
+  display: flex;
+  flex-direction: column;
+  background: #1a1e28;
+  border: 1px solid #252d3d;
+  border-radius: 12px;
+  padding: 18px;
+  gap: 12px;
+}
+
+.production-feed-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.feed-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.feed-box span {
+  font-size: 13px;
+  font-weight: 700;
+  color: #94a3b8;
+}
+
+.feed-box img {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: contain;
+  background: #090b0f;
+  border: 1px solid #2d3748;
+  border-radius: 8px;
+}
+
+.feed-box .no-img {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  background: #090b0f;
+  border: 1px solid #2d3748;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  font-size: 14px;
+}

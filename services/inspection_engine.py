@@ -10,7 +10,7 @@ from typing import Any
 
 import cv2
 import numpy as np
-
+from dataclasses import asdict
 from automation.inspection_controller import InspectionController
 from automation.plc import PLCController, SimulatedPLCController
 from automation.workflow import SingleStationInspectionController, StationRecord
@@ -449,7 +449,8 @@ class InspectionEngine:
     def recent_history(self, limit: int = 50) -> list[dict[str, Any]]:
         if not self.storage_available or self.storage is None:
             return []
-        return [record.__dict__ for record in self.storage.recent(limit)]
+
+        return [asdict(record) for record in self.storage.recent(limit)]
 
     def recent_logs(self, limit: int = 100) -> list[str]:
         return self.logs[-limit:]

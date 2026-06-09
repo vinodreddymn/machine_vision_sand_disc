@@ -3,13 +3,14 @@ import { SnapshotProvider } from './contexts/SnapshotContext';
 import { useSnapshotContext } from './contexts/SnapshotContext';
 import { Sidebar } from './components/layout/Sidebar';
 import { Header } from './components/layout/Header';
+import { Footer } from './components/layout/Footer';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { ProductionPage } from './pages/ProductionPage';
 import { TrainingPage } from './pages/TrainingPage';
 import { HistoryPage } from './pages/HistoryPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { SystemHealthPage } from './pages/SystemHealthPage';
-import { AdminPage } from './pages/AdminPage';
+import { AdminPage } from './pages/admin/AdminPage';
 import { LoginModal } from './components/auth/LoginModal';
 import { getAuthConfig } from './services/authService';
 import { canAccess } from './utils/permissions';
@@ -27,7 +28,8 @@ type Tab =
 type SettingsTab =
   | 'calibration'
   | 'tolerances'
-  | 'configurations';
+  | 'configurations'
+  | 'camera';
 
 // ─── Access Denied Component ──────────────────────────────────────────────────
 
@@ -91,16 +93,18 @@ function AppInner() {
 
   return (
     <div className="app-container">
-      <Sidebar
+      <Header
         activeTab={activeTab}
-        onTabChange={setActiveTab}
+        settingsTab={settingsTab}
       />
 
-      <main className="main-content">
-        <Header
+      <div className="app-body">
+        <Sidebar
           activeTab={activeTab}
-          settingsTab={settingsTab}
+          onTabChange={setActiveTab}
         />
+
+        <main className="main-content">
 
         {error && (
           <div
@@ -164,7 +168,10 @@ function AppInner() {
               <AccessDenied />
             ))}
         </ErrorBoundary>
-      </main>
+        </main>
+      </div>
+      
+      <Footer />
 
       {showLogin && (
         <LoginModal

@@ -1,0 +1,483 @@
+/* ── Calibration Page Layout ─────────────────────────── */
+
+.calibration-page {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  max-width: 1400px;
+}
+
+/* ── Status Banner ───────────────────────────────────── */
+
+.cal-status-banner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  border-radius: 10px;
+  border: 1px solid;
+  animation: fadeInDown 0.3s ease;
+}
+
+.cal-status-banner.calibrated {
+  background: linear-gradient(135deg, #0a2e1a 0%, #0d2416 100%);
+  border-color: #22c55e;
+  color: #bbf7d0;
+}
+
+.cal-status-banner.uncalibrated {
+  background: linear-gradient(135deg, #2e1a00 0%, #2a1800 100%);
+  border-color: #f59e0b;
+  color: #fde68a;
+}
+
+.cal-status-icon { flex-shrink: 0; }
+.cal-status-banner.calibrated   .cal-status-icon { color: #22c55e; }
+.cal-status-banner.uncalibrated .cal-status-icon { color: #f59e0b; }
+
+.cal-status-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cal-status-text strong { font-size: 15px; }
+.cal-status-text span   { font-size: 13px; opacity: 0.85; }
+.cal-status-actions     { display: flex; gap: 8px; flex-shrink: 0; }
+
+/* ── Error Banner ────────────────────────────────────── */
+
+.cal-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: #2d0f0f;
+  border: 1px solid #ef4444;
+  border-radius: 8px;
+  color: #fca5a5;
+  font-size: 13px;
+}
+
+/* ── Main 2-column Grid ──────────────────────────────── */
+
+.cal-main-grid {
+  display: grid;
+  grid-template-columns: 1fr 420px;
+  gap: 18px;
+  align-items: start;
+}
+
+/* ── Generic Panel ───────────────────────────────────── */
+
+.cal-panel {
+  background: #1a1e24;
+  border: 1px solid #2d3748;
+  border-radius: 10px;
+  padding: 20px;
+}
+
+.cal-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.cal-panel-title {
+  margin: 0 0 14px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #f8fafc;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ── Wizard Panel & Stepper ──────────────────────────── */
+
+.cal-wizard-panel {
+  background: #1a1e24;
+  border: 1px solid #2d3748;
+  border-radius: 10px;
+  padding: 24px;
+}
+
+.cal-stepper {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 28px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #2d3748;
+  flex-wrap: wrap;
+  row-gap: 8px;
+}
+
+.cal-step-wrapper { display: flex; align-items: center; gap: 4px; }
+
+.cal-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  color: #64748b;
+  background: #11141b;
+  border: 1px solid #2d3748;
+  transition: all 0.2s;
+}
+
+.cal-step.active {
+  background: linear-gradient(135deg, #1e3a5f, #1e2d4a);
+  border-color: #38bdf8;
+  color: #38bdf8;
+  font-weight: 600;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.2);
+}
+
+.cal-step.done {
+  background: #0d2416;
+  border-color: #22c55e;
+  color: #22c55e;
+}
+
+.cal-step-circle { display: flex; align-items: center; }
+.cal-step-arrow       { color: #374151; }
+.cal-step-arrow.done  { color: #22c55e; }
+
+/* ── Step Content ────────────────────────────────────── */
+
+.cal-step-content { display: flex; flex-direction: column; gap: 16px; }
+
+.cal-step-heading {
+  margin: 0;
+  font-size: 15px;
+  color: #f8fafc;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cal-step-desc { margin: 0; font-size: 13px; color: #94a3b8; line-height: 1.6; }
+
+/* ── Reference Example Box ───────────────────────────── */
+
+.cal-ref-example {
+  background: #11141b;
+  border: 1px dashed #334155;
+  border-radius: 8px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cal-ref-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #94a3b8;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.cal-ref-specs {
+  display: flex;
+  gap: 24px;
+  font-size: 14px;
+  color: #e2e8f0;
+}
+
+.cal-ref-specs span b { color: #38bdf8; }
+
+/* ── Capture Actions ─────────────────────────────────── */
+
+.cal-capture-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.cal-big-btn {
+  display: flex !important;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 22px !important;
+  font-size: 14px !important;
+  min-height: 46px;
+}
+
+.cal-or { color: #64748b; font-size: 13px; font-style: italic; }
+
+/* ── Live Preview ────────────────────────────────────── */
+
+.cal-live-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cal-feed-label {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.cal-live-stream {
+  width: 100%;
+  max-height: 300px;
+  object-fit: contain;
+  border-radius: 8px;
+  border: 1px solid #2d3748;
+  background: #0a0c10;
+}
+
+/* ── Detection Result Cards ──────────────────────────── */
+
+.cal-detect-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.cal-detect-card {
+  background: #11141b;
+  border: 1px solid #2d3748;
+  border-radius: 8px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cal-detect-card span   { font-size: 12px; color: #64748b; }
+.cal-detect-card strong { font-size: 22px; color: #38bdf8; font-variant-numeric: tabular-nums; }
+
+.cal-overlay-img {
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid #2d3748;
+  object-fit: contain;
+  max-height: 320px;
+  background: #0a0c10;
+}
+
+/* ── Step Action Bar ─────────────────────────────────── */
+
+.cal-step-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  padding-top: 8px;
+  border-top: 1px solid #1e2530;
+}
+
+/* ── Dimension Entry ─────────────────────────────────── */
+
+.cal-dim-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+.cal-field                { display: flex; flex-direction: column; gap: 6px; }
+.cal-field label          { font-size: 12px; color: #94a3b8; font-weight: 600; }
+
+.cal-field input {
+  background: #11141b;
+  border: 1px solid #2d3748;
+  border-radius: 6px;
+  color: #e2e8f0;
+  padding: 9px 12px;
+  font-size: 14px;
+  transition: border-color 0.15s;
+}
+
+.cal-field input:focus { outline: none; border-color: #38bdf8; }
+
+/* ── Scale Factor Preview ────────────────────────────── */
+
+.cal-scale-preview {
+  background: #0a1a2e;
+  border: 1px solid #1e3a5f;
+  border-radius: 8px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cal-scale-preview span { font-size: 12px; color: #64748b; }
+
+.cal-scale-value {
+  font-size: 26px;
+  color: #22d3ee;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.cal-scale-formula { font-size: 12px; color: #475569; font-style: italic; }
+
+/* ── Success Screen ──────────────────────────────────── */
+
+.cal-success-screen {
+  align-items: center;
+  text-align: center;
+  padding: 30px 0;
+}
+
+.cal-success-icon                  { color: #22c55e; margin-bottom: 8px; }
+.cal-success-screen h3             { margin: 0; font-size: 20px; color: #f8fafc; }
+.cal-success-screen p              { margin: 4px 0; color: #94a3b8; font-size: 13px; }
+.cal-success-note                  { font-size: 12px !important; color: #64748b !important; }
+
+.cal-success-metric {
+  background: #0d2416;
+  border: 1px solid #22c55e;
+  border-radius: 8px;
+  padding: 14px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 8px 0;
+}
+
+.cal-success-metric span   { font-size: 12px; color: #86efac; }
+.cal-success-metric strong { font-size: 22px; color: #22c55e; font-variant-numeric: tabular-nums; }
+
+/* ── Validation Widget ───────────────────────────────── */
+
+.cal-validate-form {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.cal-validation-result {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: #11141b;
+  border-radius: 10px;
+  padding: 18px;
+  border: 1px solid;
+}
+
+.cal-validation-result.pass { border-color: #22c55e; }
+.cal-validation-result.fail { border-color: #ef4444; }
+
+.val-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: #94a3b8;
+}
+
+.val-row strong { color: #e2e8f0; font-variant-numeric: tabular-nums; }
+
+.val-verdict {
+  text-align: center;
+  font-size: 22px;
+  font-weight: 700;
+  padding: 8px;
+  border-radius: 6px;
+  margin-top: 4px;
+}
+
+.val-verdict.pass { background: #0d2416; color: #22c55e; }
+.val-verdict.fail { background: #2d0f0f; color: #ef4444; }
+
+/* ── History Table Panel ─────────────────────────────── */
+
+.cal-history-panel {
+  background: #1a1e24;
+  border: 1px solid #2d3748;
+  border-radius: 10px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.cal-empty {
+  color: #475569;
+  font-size: 13px;
+  padding: 20px 0;
+  text-align: center;
+}
+
+.cal-history-table-wrap { overflow-x: auto; flex: 1; }
+
+.cal-history-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.cal-history-table th {
+  text-align: left;
+  padding: 8px 10px;
+  background: #11141b;
+  color: #64748b;
+  font-weight: 600;
+  border-bottom: 1px solid #2d3748;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.cal-history-table td {
+  padding: 9px 10px;
+  border-bottom: 1px solid #1a2030;
+  color: #cbd5e1;
+  vertical-align: middle;
+}
+
+.cal-row-active td { background: rgba(34, 197, 94, 0.04); }
+.cal-mono          { font-variant-numeric: tabular-nums; font-family: monospace; font-size: 11px; }
+
+.cal-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.cal-badge.active   { background: #0d2416; color: #22c55e; border: 1px solid #22c55e; }
+.cal-badge.inactive { background: #1e2530; color: #475569; border: 1px solid #334155; }
+
+.cal-delete-btn {
+  background: none;
+  border: none;
+  color: #ef4444;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  transition: background 0.15s;
+}
+
+.cal-delete-btn:hover    { background: rgba(239, 68, 68, 0.12); }
+.cal-delete-btn:disabled { color: #374151; cursor: not-allowed; }
+
+.cal-history-footer {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid #1e2530;
+}
+
+/* ── Responsive ──────────────────────────────────────── */
+
+@media (max-width: 900px) {
+  .cal-main-grid   { grid-template-columns: 1fr; }
+  .cal-dim-grid    { grid-template-columns: 1fr; }
+  .cal-detect-grid { grid-template-columns: 1fr; }
+}

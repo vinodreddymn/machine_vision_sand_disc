@@ -4,12 +4,13 @@ import { ModeSelector } from '../components/settings/ModeSelector';
 import { ToleranceForm } from '../components/settings/ToleranceForm';
 import { CalibrationSettings } from '../components/settings/CalibrationSettings';
 import { ConfigurationManager } from '../components/config/ConfigurationManager';
+import { CameraSettings } from '../components/settings/CameraSettings';
 import { ErrorBoundary } from '../components/common/ErrorBoundary';
 import { useSnapshotContext } from '../contexts/SnapshotContext';
 import { setInspectionMode } from '../services/toleranceService';
 import type { InspectionMode } from '../types/settings';
 
-type SettingsTab = 'calibration' | 'tolerances' | 'configurations';
+type SettingsTab = 'calibration' | 'tolerances' | 'configurations' | 'camera';
 
 interface SettingsPageProps {
   active: boolean;
@@ -73,6 +74,14 @@ export function SettingsPage({
           >
             System Configurations
           </button>
+          <button
+            id="settings-tab-camera"
+            className={`sidebar-button ${settingsTab === 'camera' ? 'active' : ''}`}
+            style={{ fontSize: '13px', padding: '6px 14px' }}
+            onClick={() => onSettingsTabChange('camera')}
+          >
+            Camera Config
+          </button>
         </div>
 
         {settingsTab === 'tolerances' && (
@@ -100,6 +109,12 @@ export function SettingsPage({
             <div style={{ height: '100%', overflow: 'hidden' }}>
               <ConfigurationManager />
             </div>
+          </ErrorBoundary>
+        )}
+
+        {settingsTab === 'camera' && (
+          <ErrorBoundary>
+            <CameraSettings />
           </ErrorBoundary>
         )}
       </div>

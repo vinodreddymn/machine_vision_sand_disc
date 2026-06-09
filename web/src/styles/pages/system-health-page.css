@@ -1,0 +1,105 @@
+/* ── System Health Page ──────────────────────────────── */
+
+.sys-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.sys-metric-card {
+  background: #1a1e28;
+  border: 1px solid #252d3d;
+  border-radius: 10px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sys-metric-card span {
+  font-size: 12px;
+  color: #94a3b8;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.sys-metric-card strong {
+  font-size: 22px;
+  color: #f8fafc;
+}
+
+/* ── System Status Badges ────────────────────────────── */
+
+.sys-badge-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.sys-status-badge {
+  border-radius: 10px;
+  border: 1px solid #2d3748;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sys-status-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.sys-status-badge strong {
+  font-size: 16px;
+}
+
+/* ── Severity Variants ───────────────────────────────── */
+
+.sys-normal {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.5);
+  color: #34d399;
+}
+
+.sys-warning {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.5);
+  color: #fbbf24;
+}
+
+.sys-critical {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.5);
+  color: #f87171;
+}
+
+.sys-emergency {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: #ef4444;
+  color: #fecaca;
+  animation: emergencyPulse 0.8s linear infinite;
+}
+
+/* ── Alarm Rows ──────────────────────────────────────── */
+
+.sys-alarm-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: center;
+  border: 1px solid #2d3748;
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+
+.sys-alarm-info      { background: rgba(16, 185, 129, 0.08); border-color: rgba(16, 185, 129, 0.4); }
+.sys-alarm-warning   { background: rgba(245, 158, 11, 0.08);  border-color: rgba(245, 158, 11, 0.4); }
+.sys-alarm-critical  { background: rgba(239, 68, 68, 0.08);   border-color: rgba(239, 68, 68, 0.4); }
+.sys-alarm-emergency { background: rgba(239, 68, 68, 0.16);   border-color: #ef4444; animation: emergencyPulse 0.8s linear infinite; }

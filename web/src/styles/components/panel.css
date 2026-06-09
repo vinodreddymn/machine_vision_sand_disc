@@ -1,0 +1,16 @@
+/* ── Panel / Card Container ──────────────────────────── */
+
+.panel {
+  background: #1a1e24;
+  border: 1px solid #343d47;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.actions-panel {
+  min-height: 130px;
+}
+
+.action-grid {
+  margin-top: 12px;
+}

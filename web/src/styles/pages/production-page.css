@@ -1,0 +1,156 @@
+/* ── Production Page Layout ──────────────────────────── */
+
+.grid-production {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 20px;
+  padding: 24px;
+}
+
+.grid-training {
+  display: grid;
+  grid-template-columns: 3fr 2fr;
+  gap: 20px;
+  padding: 24px;
+}
+
+/* ── Station Grid ────────────────────────────────────── */
+
+.station-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.station-card {
+  display: grid;
+  gap: 12px;
+}
+
+.station-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.media-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.viewer {
+  display: grid;
+  gap: 6px;
+}
+
+.viewer img {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: contain;
+  background: #0b0d10;
+  border: 1px solid #37414b;
+  border-radius: 6px;
+}
+
+/* ── Station Fields ──────────────────────────────────── */
+
+.station-fields,
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.summary-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 12px;
+}
+
+.field,
+.status-pill {
+  min-height: 48px;
+  background: #111418;
+  border: 1px solid #343d47;
+  border-radius: 6px;
+  padding: 7px 9px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+}
+
+.field strong,
+.status-pill strong {
+  color: #f4f7f8;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.status-pill {
+  min-width: 112px;
+}
+
+/* ── Defect Tags ─────────────────────────────────────── */
+
+.defect-list {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.defect-list span {
+  background: #271f1a;
+  border: 1px solid #684d31;
+  color: #f2d2a4;
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 12px;
+}
+
+/* ── PLC Telemetry Panel ─────────────────────────────── */
+
+.plc-telemetry-panel {
+  display: flex;
+  flex-direction: column;
+  background: #1a1e28;
+  border: 1px solid #252d3d;
+  border-radius: 12px;
+  padding: 18px;
+  gap: 12px;
+}
+
+.plc-telemetry-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.plc-telemetry-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: #0f1219;
+  border: 1px solid #2d3748;
+  border-radius: 8px;
+}
+
+.plc-telemetry-item span {
+  font-size: 12px;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+}
+
+.plc-telemetry-item strong {
+  font-size: 13px;
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+
+.plc-val-running { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+.plc-val-idle    { background: rgba(100, 116, 139, 0.15); color: #94a3b8; }
+.plc-val-active  { background: rgba(245, 158, 11, 0.15);  color: #fbbf24; }
+.plc-val-fault   { background: rgba(239, 68, 68, 0.15);   color: #f87171; }

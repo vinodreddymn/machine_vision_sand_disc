@@ -1,0 +1,294 @@
+/* =========================================================
+   APPLICATION SHELL
+   ========================================================= */
+
+:root {
+  --bg-primary: #0b0f17;
+  --bg-secondary: #111827;
+  --bg-tertiary: #1a2233;
+
+  --border-color: rgba(255, 255, 255, 0.08);
+
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+
+  --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.15);
+  --shadow-md: 0 10px 30px rgba(0, 0, 0, 0.25);
+  --shadow-lg: 0 20px 45px rgba(0, 0, 0, 0.35);
+
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 22px;
+
+  --header-height: 72px;
+  --content-width: 1900px;
+
+  --transition: all 0.25s ease;
+}
+
+/* =========================================================
+   ROOT APP
+   ========================================================= */
+
+.app {
+  min-height: 100vh;
+  position: relative;
+  overflow: hidden;
+
+  background:
+    radial-gradient(
+      circle at top right,
+      rgba(59, 130, 246, 0.12),
+      transparent 35%
+    ),
+    radial-gradient(
+      circle at bottom left,
+      rgba(16, 185, 129, 0.08),
+      transparent 40%
+    ),
+    linear-gradient(
+      rgba(255,255,255,0.03) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      90deg,
+      rgba(255,255,255,0.03) 1px,
+      transparent 1px
+    ),
+    var(--bg-primary);
+
+  background-size:
+    auto,
+    auto,
+    32px 32px,
+    32px 32px;
+
+  color: var(--text-primary);
+}
+
+/* =========================================================
+   MAIN APPLICATION CONTAINER
+   ========================================================= */
+
+.app-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  position: relative;
+}
+
+/* =========================================================
+   APPLICATION BODY
+   Sidebar + Main Content
+   ========================================================= */
+
+.app-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* =========================================================
+   MAIN CONTENT AREA
+   ========================================================= */
+
+.main-content {
+  flex: 1;
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  scroll-behavior: smooth;
+}
+
+/* Modern Scrollbar */
+
+.main-content::-webkit-scrollbar {
+  width: 10px;
+}
+
+.main-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.main-content::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.25);
+  border-radius: 999px;
+}
+
+.main-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.45);
+}
+
+/* =========================================================
+   PAGE WORKSPACE
+   ========================================================= */
+
+.workspace {
+  width: min(var(--content-width), 100%);
+  margin: 0 auto;
+
+  padding: 24px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* =========================================================
+   PAGE HEADER
+   ========================================================= */
+
+.workspace-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  min-height: var(--header-height);
+
+  padding: 18px 28px;
+
+  background: rgba(17, 24, 39, 0.72);
+
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+
+  box-shadow: var(--shadow-md);
+}
+
+.header-meta {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+/* =========================================================
+   TOOLBAR SECTION
+   ========================================================= */
+
+.toolbar {
+  display: grid;
+  grid-template-columns: 360px minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+/* =========================================================
+   LOWER CONTENT GRID
+   ========================================================= */
+
+.lower-grid {
+  display: grid;
+  grid-template-columns: 360px minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+/* =========================================================
+   CONTENT PANELS
+   ========================================================= */
+
+.panel {
+  background: rgba(17, 24, 39, 0.75);
+
+  border: 1px solid var(--border-color);
+
+  border-radius: var(--radius-md);
+
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+
+  box-shadow: var(--shadow-sm);
+
+  transition: var(--transition);
+}
+
+.panel:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+/* =========================================================
+   RESPONSIVE DESIGN
+   ========================================================= */
+
+@media (max-width: 1400px) {
+  .toolbar,
+  .lower-grid {
+    grid-template-columns: 320px minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 1200px) {
+  .toolbar,
+  .lower-grid {
+    grid-template-columns: 280px minmax(0, 1fr);
+  }
+
+  .workspace {
+    padding: 20px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .toolbar,
+  .lower-grid,
+  .grid-production,
+  .grid-training,
+  .history-page {
+    grid-template-columns: 1fr;
+  }
+
+  .workspace-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .header-meta {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
+@media (max-width: 768px) {
+  .workspace {
+    padding: 16px;
+    gap: 16px;
+  }
+
+  .workspace-header {
+    padding: 16px 20px;
+  }
+
+  .toolbar,
+  .lower-grid {
+    gap: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .workspace {
+    padding: 12px;
+  }
+
+  .workspace-header {
+    padding: 14px 16px;
+    border-radius: var(--radius-sm);
+  }
+
+  .header-meta {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+}

@@ -1,0 +1,17 @@
+/* ── Global Reset & Base ─────────────────────────────── */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #101114;
+  color: #eef2f4;
+  font-family: "Segoe UI", Arial, sans-serif;
+}
+
+button,
+input {
+  font: inherit;
+}
