@@ -33,3 +33,14 @@ export function getServiceStatus(): Promise<Record<string, ServiceStatus>> {
 export function getStartupDiagnostics(): Promise<StartupDiagnostics> {
   return getJson<StartupDiagnostics>('/api/system/diagnostics');
 }
+export function restartService(name: string) {
+  return postJson(`/api/services/${name}/restart`);
+}
+
+export function startService(name: string) {
+  return postJson(`/api/services/${name}/start`);
+}
+
+export function stopService(name: string) {
+  return postJson(`/api/services/${name}/stop`);
+}

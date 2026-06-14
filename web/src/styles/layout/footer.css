@@ -1,260 +1,187 @@
-/* =========================================================
-   WORKSPACE FOOTER
-   Enterprise Dashboard Footer
-   ========================================================= */
+.footer {
+  height: 64px;
 
-.workspace-footer {
-  display: flex;
+  display: grid;
+  grid-template-columns: 260px 1fr auto;
   align-items: center;
-  justify-content: space-between;
 
-  min-height: 58px;
+  gap: 24px;
 
-  padding: 0 24px;
+  padding: 0 20px;
 
-  background: rgba(15, 23, 42, 0.85);
+  background: var(--bg-secondary);
 
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid var(--border-color);
 
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
-
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(20px);
 
   flex-shrink: 0;
-  gap: 20px;
-
-  font-size: 13px;
-
-  position: relative;
 }
 
-/* =========================================================
-   LEFT SECTION
-   ========================================================= */
+/* -------------------------------------------------- */
+/* Left */
+/* -------------------------------------------------- */
 
-.footer-content {
+.footer-left {
   display: flex;
   align-items: center;
-  gap: 16px;
-
-  min-width: 0;
 }
 
 .footer-brand {
-  font-size: 13px;
-  font-weight: 700;
-
-  color: #e2e8f0;
-
-  letter-spacing: 0.4px;
-
-  white-space: nowrap;
-}
-
-.footer-brand::before {
-  content: "●";
-  color: #10b981;
-  margin-right: 8px;
-}
-
-.footer-copyright {
-  color: #64748b;
-  font-size: 12px;
-
-  white-space: nowrap;
-}
-
-/* =========================================================
-   CENTER STATUS AREA
-   ========================================================= */
-
-.footer-status {
   display: flex;
+  flex-direction: column;
+}
+
+.footer-brand-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.footer-brand-copy {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* -------------------------------------------------- */
+/* Center */
+/* -------------------------------------------------- */
+
+.footer-center {
+  display: flex;
+  justify-content: center;
   align-items: center;
-  gap: 12px;
+
+  gap: 10px;
 
   flex-wrap: wrap;
 }
 
-.footer-badge {
+.status-item {
   display: flex;
   align-items: center;
   gap: 6px;
 
-  padding: 4px 10px;
+  padding: 6px 10px;
 
-  border-radius: 999px;
-
-  background: rgba(255, 255, 255, 0.04);
-
-  border: 1px solid rgba(255, 255, 255, 0.06);
-
-  color: #94a3b8;
+  border-radius: 10px;
 
   font-size: 11px;
   font-weight: 600;
 
-  white-space: nowrap;
+  border: 1px solid transparent;
+
+  transition: all .2s ease;
 }
 
-.footer-badge.online {
+.status-label {
+  color: var(--text-muted);
+}
+
+.status-value {
+  font-weight: 700;
+}
+
+/* -------------------------------------------------- */
+/* Status Types */
+/* -------------------------------------------------- */
+
+.status-item.success {
   color: #10b981;
-  border-color: rgba(16, 185, 129, 0.25);
-  background: rgba(16, 185, 129, 0.08);
+  background: rgba(16,185,129,.10);
+  border-color: rgba(16,185,129,.25);
 }
 
-.footer-badge.warning {
+.status-item.warning {
   color: #f59e0b;
-  border-color: rgba(245, 158, 11, 0.25);
-  background: rgba(245, 158, 11, 0.08);
+  background: rgba(245,158,11,.10);
+  border-color: rgba(245,158,11,.25);
 }
 
-.footer-badge.error {
+.status-item.danger {
   color: #ef4444;
-  border-color: rgba(239, 68, 68, 0.25);
-  background: rgba(239, 68, 68, 0.08);
+  background: rgba(239,68,68,.10);
+  border-color: rgba(239,68,68,.25);
 }
 
-/* =========================================================
-   RIGHT SECTION
-   ========================================================= */
+.status-item.neutral {
+  color: #94a3b8;
+  background: rgba(148,163,184,.08);
+  border-color: rgba(148,163,184,.15);
+}
 
-.footer-links {
+/* -------------------------------------------------- */
+/* Right */
+/* -------------------------------------------------- */
+
+.footer-right {
   display: flex;
   align-items: center;
-  gap: 18px;
+  gap: 10px;
 }
 
-.footer-link {
-  position: relative;
-
-  color: #94a3b8;
-
-  text-decoration: none;
-  font-size: 12px;
-  font-weight: 500;
-
-  transition: all 0.25s ease;
-}
-
-.footer-link:hover {
-  color: #38bdf8;
-}
-
-.footer-link::after {
-  content: "";
-
-  position: absolute;
-  left: 0;
-  bottom: -3px;
-
-  width: 0;
-  height: 1px;
-
-  background: #38bdf8;
-
-  transition: width 0.25s ease;
-}
-
-.footer-link:hover::after {
-  width: 100%;
-}
-
-/* =========================================================
-   VERSION DISPLAY
-   ========================================================= */
-
-.footer-version {
-  padding: 4px 8px;
+.footer-env {
+  padding: 5px 10px;
 
   border-radius: 8px;
-
-  background: rgba(255, 255, 255, 0.04);
-
-  border: 1px solid rgba(255, 255, 255, 0.05);
-
-  color: #64748b;
-
-  font-size: 11px;
-  font-weight: 600;
-
-  font-family: "Consolas", "Courier New", monospace;
-
-  letter-spacing: 0.5px;
-
-  white-space: nowrap;
-}
-
-/* =========================================================
-   ENVIRONMENT TAG
-   ========================================================= */
-
-.footer-environment {
-  padding: 4px 8px;
-
-  border-radius: 6px;
-
-  background: rgba(59, 130, 246, 0.12);
-
-  border: 1px solid rgba(59, 130, 246, 0.25);
-
-  color: #60a5fa;
 
   font-size: 10px;
   font-weight: 700;
 
-  letter-spacing: 0.8px;
+  letter-spacing: 1px;
 
-  text-transform: uppercase;
+  color: #60a5fa;
+
+  background: rgba(59,130,246,.12);
+
+  border: 1px solid rgba(59,130,246,.25);
 }
 
-/* =========================================================
-   RESPONSIVE
-   ========================================================= */
+.footer-version {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  padding: 5px 10px;
+
+  border-radius: 8px;
+
+  background: rgba(255,255,255,.04);
+
+  border: 1px solid var(--border-color);
+
+  color: var(--text-secondary);
+
+  font-size: 11px;
+
+  font-family: Consolas, monospace;
+}
+
+/* -------------------------------------------------- */
+/* Responsive */
+/* -------------------------------------------------- */
+
+@media (max-width: 1400px) {
+  .footer {
+    grid-template-columns: 220px 1fr;
+  }
+
+  .footer-right {
+    display: none;
+  }
+}
 
 @media (max-width: 1024px) {
-  .workspace-footer {
-    flex-wrap: wrap;
-    justify-content: center;
-    padding: 12px 18px;
-    min-height: auto;
-  }
+  .footer {
+    height: auto;
 
-  .footer-content,
-  .footer-links,
-  .footer-status {
-    justify-content: center;
-    width: 100%;
-  }
-}
-
-@media (max-width: 768px) {
-  .footer-links {
-    flex-wrap: wrap;
-    gap: 12px;
-  }
-
-  .footer-content {
+    display: flex;
     flex-direction: column;
-    gap: 4px;
-    text-align: center;
+
+    padding: 12px;
   }
 
-  .footer-status {
-    gap: 8px;
-  }
-}
-
-@media (max-width: 480px) {
-
-  .footer-links,
-  .footer-status {
-    flex-direction: column;
-  }
-
-  .footer-version,
-  .footer-environment {
-    width: fit-content;
+  .footer-center {
+    justify-content: center;
   }
 }

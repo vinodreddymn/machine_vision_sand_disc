@@ -1,16 +1,18 @@
-/* ── Panel / Card Container ──────────────────────────── */
-
 .panel {
-  background: #1a1e24;
-  border: 1px solid #343d47;
-  border-radius: 8px;
-  padding: 12px;
+  background: var(--bg-panel);
+
+  border: 1px solid var(--border-color);
+
+  border-radius: var(--radius-md);
+
+  backdrop-filter: blur(12px);
+
+  box-shadow: var(--shadow-sm);
+
+  transition: var(--transition);
 }
 
-.actions-panel {
-  min-height: 130px;
-}
-
-.action-grid {
-  margin-top: 12px;
+.panel:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
 }

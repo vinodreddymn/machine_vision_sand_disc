@@ -1,79 +1,328 @@
-/* ── History Page Layout ─────────────────────────────── */
+/* =========================================================
+   HISTORY PAGE
+========================================================= */
 
 .history-page {
-  padding: 24px;
+  height: 100%;
+  min-height: 0;
+
   display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 20px;
+  grid-template-columns: minmax(0, 2.4fr) minmax(340px, 1fr);
+  gap: 24px;
+
+  padding: 24px;
+  overflow: hidden;
 }
 
-/* ── History Table Container ─────────────────────────── */
+/* =========================================================
+   CARD STYLE
+========================================================= */
 
-.history-table-container {
-  background: #1a1e28;
-  border: 1px solid #252d3d;
-  border-radius: 12px;
-  padding: 16px;
-  overflow-x: auto;
+.history-table-container,
+.history-details-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(22, 27, 38, 0.95),
+      rgba(16, 21, 31, 0.98)
+    );
+
+  border: 1px solid rgba(148, 163, 184, 0.12);
+
+  border-radius: 18px;
+
+  backdrop-filter: blur(12px);
+
+  box-shadow:
+    0 12px 32px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(255,255,255,0.04);
+
+  overflow: hidden;
 }
+
+/* =========================================================
+   TABLE HEADER
+========================================================= */
 
 .table-header-filters {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 16px;
-  gap: 12px;
+  flex-wrap: wrap;
+
+  gap: 14px;
+
+  padding: 18px 20px;
+
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255,255,255,0.03),
+      transparent
+    );
 }
 
-/* ── Search / Select Inputs ──────────────────────────── */
+.table-header-title {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.table-header-title h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.table-header-title p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+/* =========================================================
+   FILTER SECTION
+========================================================= */
+
+.table-filters {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
 
 .search-input,
 .select-input {
-  background: #0f1219;
-  border: 1px solid #2d3748;
-  color: #f8fafc;
-  padding: 8px 12px;
-  border-radius: 6px;
+  height: 42px;
+  min-width: 180px;
+
+  background: rgba(12, 17, 26, 0.9);
+
+  border: 1px solid rgba(148, 163, 184, 0.15);
+
+  color: var(--text-primary);
+
+  border-radius: 10px;
+
+  padding: 0 14px;
+
   font-size: 14px;
-  outline: none;
+
+  transition:
+    border-color .2s ease,
+    box-shadow .2s ease,
+    background .2s ease;
+}
+
+.search-input:hover,
+.select-input:hover {
+  border-color: rgba(56, 189, 248, 0.3);
 }
 
 .search-input:focus,
 .select-input:focus {
+  outline: none;
+
   border-color: #38bdf8;
+
+  box-shadow:
+    0 0 0 3px rgba(56,189,248,0.15);
 }
 
-/* ── Inspection Table ────────────────────────────────── */
+/* =========================================================
+   TABLE WRAPPER
+========================================================= */
+
+.table-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+/* =========================================================
+   INSPECTION TABLE
+========================================================= */
 
 .inspection-table {
   width: 100%;
   border-collapse: collapse;
-  text-align: left;
 }
 
-.inspection-table th,
-.inspection-table td {
-  padding: 12px 16px;
-  border-bottom: 1px solid #2d3748;
-  font-size: 14px;
+.inspection-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 .inspection-table th {
-  color: #94a3b8;
+  padding: 14px 16px;
+
+  text-align: left;
+
+  font-size: 12px;
   font-weight: 700;
-  background: rgba(21, 24, 33, 0.4);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+
+  color: #94a3b8;
+
+  background:
+    linear-gradient(
+      180deg,
+      #1f2937,
+      #111827
+    );
+
+  border-bottom: 1px solid rgba(255,255,255,0.08);
 }
 
+.inspection-table td {
+  padding: 14px 16px;
+
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+/* =========================================================
+   ROW STATES
+========================================================= */
+
 .inspection-table tbody tr {
+  transition:
+    background .25s ease,
+    transform .15s ease;
+
   cursor: pointer;
-  transition: background 0.2s ease;
 }
 
 .inspection-table tbody tr:hover {
-  background: rgba(56, 189, 248, 0.04);
+  background: rgba(56, 189, 248, 0.06);
 }
 
 .inspection-table tbody tr.selected {
-  background: rgba(56, 189, 248, 0.1);
-  border-left: 3px solid #38bdf8;
+  background:
+    linear-gradient(
+      90deg,
+      rgba(56,189,248,0.18),
+      rgba(56,189,248,0.05)
+    );
+
+  box-shadow:
+    inset 4px 0 0 #38bdf8;
+}
+
+/* =========================================================
+   STATUS BADGES
+========================================================= */
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-width: 80px;
+  height: 28px;
+
+  padding: 0 12px;
+
+  border-radius: 999px;
+
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.status-pass {
+  color: #22c55e;
+
+  background:
+    rgba(34,197,94,0.12);
+
+  border:
+    1px solid rgba(34,197,94,0.25);
+}
+
+.status-fail {
+  color: #ef4444;
+
+  background:
+    rgba(239,68,68,0.12);
+
+  border:
+    1px solid rgba(239,68,68,0.25);
+}
+
+.status-warning {
+  color: #f59e0b;
+
+  background:
+    rgba(245,158,11,0.12);
+
+  border:
+    1px solid rgba(245,158,11,0.25);
+}
+
+/* =========================================================
+   SCROLLBAR
+========================================================= */
+
+.table-scroll::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.table-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.table-scroll::-webkit-scrollbar-thumb {
+  background: rgba(148,163,184,0.18);
+  border-radius: 999px;
+}
+
+.table-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(148,163,184,0.3);
+}
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media (max-width: 1400px) {
+  .history-page {
+    grid-template-columns: 1fr;
+  }
+
+  .history-details-panel {
+    min-height: 320px;
+  }
+}
+
+@media (max-width: 768px) {
+  .history-page {
+    padding: 16px;
+    gap: 16px;
+  }
+
+  .table-header-filters {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .table-filters {
+    width: 100%;
+  }
+
+  .search-input,
+  .select-input {
+    width: 100%;
+  }
 }

@@ -52,7 +52,7 @@ export function SettingsPage({
         >
           <button
             id="settings-tab-calibration"
-            className={`sidebar-button ${settingsTab === 'calibration' ? 'active' : ''}`}
+            className={`settings-tab-btn ${settingsTab === 'calibration' ? 'active' : ''}`}
             style={{ fontSize: '13px', padding: '6px 14px' }}
             onClick={() => onSettingsTabChange('calibration')}
           >
@@ -60,7 +60,7 @@ export function SettingsPage({
           </button>
           <button
             id="settings-tab-tolerances"
-            className={`sidebar-button ${settingsTab === 'tolerances' ? 'active' : ''}`}
+            className={`settings-tab-btn ${settingsTab === 'tolerances' ? 'active' : ''}`}
             style={{ fontSize: '13px', padding: '6px 14px' }}
             onClick={() => onSettingsTabChange('tolerances')}
           >
@@ -68,7 +68,7 @@ export function SettingsPage({
           </button>
           <button
             id="settings-tab-configurations"
-            className={`sidebar-button ${settingsTab === 'configurations' ? 'active' : ''}`}
+            className={`settings-tab-btn ${settingsTab === 'configurations' ? 'active' : ''}`}
             style={{ fontSize: '13px', padding: '6px 14px' }}
             onClick={() => onSettingsTabChange('configurations')}
           >
@@ -76,7 +76,7 @@ export function SettingsPage({
           </button>
           <button
             id="settings-tab-camera"
-            className={`sidebar-button ${settingsTab === 'camera' ? 'active' : ''}`}
+            className={`settings-tab-btn ${settingsTab === 'camera' ? 'active' : ''}`}
             style={{ fontSize: '13px', padding: '6px 14px' }}
             onClick={() => onSettingsTabChange('camera')}
           >

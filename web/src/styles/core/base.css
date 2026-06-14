@@ -4,11 +4,18 @@
   box-sizing: border-box;
 }
 
+html,
+body,
+#root {
+  height: 100%;
+}
+
 body {
   margin: 0;
   background: #101114;
   color: #eef2f4;
   font-family: "Segoe UI", Arial, sans-serif;
+  overflow: hidden;
 }
 
 button,

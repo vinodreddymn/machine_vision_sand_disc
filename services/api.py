@@ -19,6 +19,8 @@ from fastapi.responses import FileResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
+from automation.arduino_plc import ArduinoNanoController
+
 from config.settings import (
     load_tolerances,
     save_tolerances,
@@ -126,14 +128,31 @@ class ConfidenceThresholdRequest(BaseModel):
     low_confidence: float = 0.0
 
 
+
+
+
 def _build_default_engine() -> InspectionEngine:
+
     storage: InspectionStorageService | None = None
+
     try:
-        storage = InspectionStorageService(PostgresInspectionRepository(POSTGRES_DSN))
+        storage = InspectionStorageService(
+            PostgresInspectionRepository(
+                POSTGRES_DSN
+            )
+        )
     except Exception:
         storage = None
-    return InspectionEngine(storage=storage)
 
+    arduino = ArduinoNanoController(
+        port="COM4",       # Windows
+        baudrate=115200
+    )
+
+    return InspectionEngine(
+        plc=arduino,
+        storage=storage
+    )
 
 def create_app(engine: InspectionEngine | None = None) -> FastAPI:
     engine = engine or _build_default_engine()

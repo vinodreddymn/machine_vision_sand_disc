@@ -1,105 +1,772 @@
-/* ── System Health Page ──────────────────────────────── */
-
-.sys-metric-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 12px;
-}
-
-.sys-metric-card {
-  background: #1a1e28;
-  border: 1px solid #252d3d;
-  border-radius: 10px;
-  padding: 14px;
+/* =========================================================
+   SYSTEM OPERATIONS CENTER
+========================================================= */
+.system-health-page {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+
+  gap: 24px;
+
+  width: 100%;
+  height: 100%;
+
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  padding: 8px 8px 80px;
+
+  scrollbar-width: thin;
+}
+/* =========================================================
+   COMMON PANEL
+========================================================= */
+.sys-panel {
+  position: relative;
+
+  display: flex;
+  flex-direction: column;
+
+  min-height: 180px;
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(18,24,36,.98),
+      rgba(10,14,22,.98)
+    );
+
+  border:
+    1px solid rgba(59,130,246,.15);
+
+  border-radius: 20px;
+
+  padding: 20px;
+
+  overflow: visible;
+
+  flex-shrink: 0;
 }
 
-.sys-metric-card span {
-  font-size: 12px;
-  color: #94a3b8;
-  text-transform: uppercase;
+.sys-panel::before {
+  content: '';
+
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+
+  height: 3px;
+
+  background:
+    linear-gradient(
+      90deg,
+      #3b82f6,
+      #06b6d4,
+      #10b981
+    );
+}
+
+.sys-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  margin-bottom: 18px;
+
+  flex-shrink: 0;
+}
+
+.sys-panel-header h3 {
+  margin: 0;
+
+  font-size: 18px;
   font-weight: 700;
-}
 
-.sys-metric-card strong {
-  font-size: 22px;
   color: #f8fafc;
 }
 
-/* ── System Status Badges ────────────────────────────── */
+.sys-panel-header h3 {
+  margin: 0;
 
-.sys-badge-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 12px;
+  font-size: 18px;
+  font-weight: 700;
+
+  color: var(--text-primary);
 }
 
-.sys-status-badge {
-  border-radius: 10px;
-  border: 1px solid #2d3748;
-  padding: 12px;
+/* =========================================================
+   2 COLUMN LAYOUT
+========================================================= */
+
+.sys-dual-layout {
+  display: grid;
+
+  grid-template-columns:
+    1fr 1fr;
+
+  gap: 24px;
+}
+
+/* =========================================================
+   OVERVIEW
+========================================================= */
+
+.sys-overview {
+  display: grid;
+
+  grid-template-columns:
+    320px 1fr;
+
+  gap: 24px;
+}
+
+.sys-health-score {
+  background:
+    linear-gradient(
+      135deg,
+      rgba(37,99,235,.18),
+      rgba(14,165,233,.08)
+    );
+
+  border:
+    1px solid rgba(59,130,246,.25);
+
+  border-radius: 24px;
+
+  min-height: 220px;
+
   display: flex;
   flex-direction: column;
-  gap: 8px;
+
+  align-items: center;
+  justify-content: center;
 }
 
-.sys-status-head {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: #94a3b8;
+.sys-score-value {
+  font-size: 58px;
+  font-weight: 800;
+
+  color: white;
+}
+
+.sys-score-label {
+  margin-top: 8px;
+
+  letter-spacing: .12em;
+
+  text-transform: uppercase;
+
   font-size: 12px;
-  font-weight: 700;
+
+  color: #94a3b8;
+}
+
+.sys-overview-kpis {
+  display: grid;
+
+  grid-template-columns:
+    repeat(4, 1fr);
+
+  gap: 16px;
+}
+
+.sys-kpi-card {
+  background:
+    rgba(255,255,255,.03);
+
+  border:
+    1px solid rgba(255,255,255,.05);
+
+  border-radius: 18px;
+
+  padding: 20px;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+}
+
+.sys-kpi-card span {
+  font-size: 12px;
+
+  text-transform: uppercase;
+
+  color: #94a3b8;
+}
+
+.sys-kpi-card strong {
+  font-size: 24px;
+
+  color: white;
+}
+
+
+/* =========================================================
+   INFRASTRUCTURE
+========================================================= */
+
+.sys-infrastructure {
+  display: grid;
+
+  grid-template-columns:
+    1.3fr 1fr;
+
+  gap: 24px;
+}
+
+.sys-resource-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(2, 1fr);
+
+  gap: 16px;
+}
+
+.sys-resource-card {
+  background:
+    rgba(255,255,255,.03);
+
+  border:
+    1px solid rgba(255,255,255,.06);
+
+  border-radius: 18px;
+
+  padding: 18px;
+}
+
+.sys-resource-card span {
+  display: block;
+
+  margin-bottom: 10px;
+
+  color: #94a3b8;
+
+  font-size: 12px;
+
   text-transform: uppercase;
 }
 
-.sys-status-badge strong {
-  font-size: 16px;
+.sys-resource-card strong {
+  font-size: 30px;
+
+  color: white;
 }
 
-/* ── Severity Variants ───────────────────────────────── */
-
-.sys-normal {
-  background: rgba(16, 185, 129, 0.12);
-  border-color: rgba(16, 185, 129, 0.5);
-  color: #34d399;
-}
-
-.sys-warning {
-  background: rgba(245, 158, 11, 0.12);
-  border-color: rgba(245, 158, 11, 0.5);
-  color: #fbbf24;
-}
-
-.sys-critical {
-  background: rgba(239, 68, 68, 0.12);
-  border-color: rgba(239, 68, 68, 0.5);
-  color: #f87171;
-}
-
-.sys-emergency {
-  background: rgba(239, 68, 68, 0.2);
-  border-color: #ef4444;
-  color: #fecaca;
-  animation: emergencyPulse 0.8s linear infinite;
-}
-
-/* ── Alarm Rows ──────────────────────────────────────── */
-
-.sys-alarm-row {
+.sys-device-grid {
   display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 10px;
-  align-items: center;
-  border: 1px solid #2d3748;
-  border-radius: 8px;
-  padding: 10px;
-  margin-bottom: 10px;
+  gap: 14px;
 }
 
-.sys-alarm-info      { background: rgba(16, 185, 129, 0.08); border-color: rgba(16, 185, 129, 0.4); }
-.sys-alarm-warning   { background: rgba(245, 158, 11, 0.08);  border-color: rgba(245, 158, 11, 0.4); }
-.sys-alarm-critical  { background: rgba(239, 68, 68, 0.08);   border-color: rgba(239, 68, 68, 0.4); }
-.sys-alarm-emergency { background: rgba(239, 68, 68, 0.16);   border-color: #ef4444; animation: emergencyPulse 0.8s linear infinite; }
+.sys-device-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+
+  padding: 16px;
+
+  border-radius: 16px;
+
+  background:
+    rgba(255,255,255,.03);
+
+  border:
+    1px solid rgba(255,255,255,.06);
+}
+
+.sys-device-card strong {
+  color: white;
+}
+
+.sys-device-card span {
+  margin-left: auto;
+
+  color: #10b981;
+
+  font-weight: 700;
+}
+
+
+/* =========================================================
+   VISION + KPI
+========================================================= */
+
+.sys-vision-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(2, 1fr);
+
+  gap: 14px;
+}
+
+.sys-stat {
+  padding: 16px;
+
+  border-radius: 16px;
+
+  background:
+    rgba(255,255,255,.03);
+
+  border:
+    1px solid rgba(255,255,255,.06);
+}
+
+.sys-stat span {
+  display: block;
+
+  margin-bottom: 10px;
+
+  color: #94a3b8;
+
+  font-size: 12px;
+
+  text-transform: uppercase;
+}
+
+.sys-stat strong {
+  font-size: 22px;
+  color: white;
+}
+
+
+/* =========================================================
+   PRODUCTION IMPACT
+========================================================= */
+
+.sys-production-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(4, 1fr);
+
+  gap: 16px;
+}
+
+.sys-impact-card {
+  padding: 20px;
+
+  border-radius: 18px;
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(30,41,59,.75),
+      rgba(15,23,42,.90)
+    );
+
+  border:
+    1px solid rgba(59,130,246,.12);
+
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sys-impact-card span {
+  color: #94a3b8;
+}
+
+.sys-impact-card strong {
+  color: white;
+
+  font-size: 28px;
+}
+
+/* =========================================================
+   ALARMS
+========================================================= */
+
+.sys-alarm-summary {
+  display: grid;
+
+  grid-template-columns:
+    repeat(4, 1fr);
+
+  gap: 16px;
+
+  margin-bottom: 20px;
+}
+
+.sys-alarm-stat {
+  padding: 16px;
+
+  border-radius: 16px;
+
+  background:
+    rgba(255,255,255,.03);
+
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sys-alarm-stat strong {
+  font-size: 28px;
+  color: white;
+}
+
+.sys-alarm-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 18px;
+
+  margin-bottom: 12px;
+
+  border-radius: 16px;
+
+  background:
+    rgba(255,255,255,.03);
+
+  border:
+    1px solid rgba(255,255,255,.06);
+}
+
+.severity-critical,
+.severity-emergency {
+  border-color:
+    rgba(239,68,68,.45);
+}
+
+.severity-warning {
+  border-color:
+    rgba(245,158,11,.45);
+}
+
+
+/* =========================================================
+   SERVICE CONTROL
+========================================================= */
+
+.sys-service-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(auto-fit,minmax(340px,1fr));
+
+  gap: 16px;
+
+  width: 100%;
+}
+
+.sys-service-card {
+  padding: 20px;
+
+  border-radius: 20px;
+
+  background:
+    rgba(255,255,255,.03);
+
+  border:
+    1px solid rgba(255,255,255,.06);
+}
+
+.sys-service-header {
+  display: flex;
+  gap: 14px;
+
+  align-items: center;
+
+  margin-bottom: 16px;
+}
+
+.sys-service-name {
+  font-size: 16px;
+  font-weight: 700;
+
+  color: white;
+}
+
+.service-online {
+  color: #10b981;
+}
+
+.service-offline {
+  color: #ef4444;
+}
+
+.sys-service-actions {
+  display: flex;
+  gap: 8px;
+
+  margin-top: 16px;
+}
+
+/* =========================================================
+   ANALYTICS
+========================================================= */
+
+.sys-analytics-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.sys-analytics-card {
+  padding: 18px;
+
+  border-radius: 16px;
+
+  background:
+    rgba(255,255,255,.03);
+}
+
+.sys-analytics-current {
+  font-size: 30px;
+  font-weight: 700;
+
+  color: white;
+}
+
+.sys-analytics-stats {
+  display: flex;
+  justify-content: space-between;
+
+  margin-top: 14px;
+}
+
+/* =========================================================
+   EVENT STREAM
+========================================================= */
+
+.sys-event-stream {
+  max-height: 500px;
+
+  overflow-y: auto;
+
+  display: flex;
+  flex-direction: column;
+
+  gap: 10px;
+}
+
+.sys-event-row {
+  display: flex;
+  gap: 12px;
+
+  padding: 14px;
+
+  border-radius: 14px;
+
+  background:
+    rgba(255,255,255,.03);
+}
+
+.sys-event-time {
+  font-size: 12px;
+
+  color: #94a3b8;
+}
+.sys-empty-state {
+  padding: 20px;
+
+  text-align: center;
+
+  color: #94a3b8;
+
+  border-radius: 12px;
+
+  background: rgba(255,255,255,.03);
+}
+
+.sys-alarm-list {
+  display: flex;
+  flex-direction: column;
+
+  gap: 12px;
+
+  max-height: 700px;
+
+  overflow-y: auto;
+
+  padding-right: 4px;
+}
+
+.sys-alarm-main {
+  flex: 1;
+}
+
+.sys-alarm-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: white;
+}
+
+.sys-alarm-message {
+  margin-top: 4px;
+
+  color: #cbd5e1;
+}
+
+.sys-alarm-meta {
+  margin-top: 6px;
+
+  font-size: 12px;
+
+  color: #94a3b8;
+}
+
+.sys-service-info {
+  display: flex;
+  flex-direction: column;
+
+  gap: 8px;
+
+  color: #cbd5e1;
+
+  margin-bottom: 12px;
+}
+
+.sys-service-actions button {
+  flex: 1;
+}
+
+
+.sys-startup-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.sys-startup-step {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  padding: 14px;
+
+  border-radius: 14px;
+
+  background: rgba(255,255,255,.03);
+}
+
+.sys-startup-step strong {
+  color: white;
+}
+
+.sys-notification-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.sys-notification-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 14px;
+
+  border-radius: 14px;
+
+  background: rgba(255,255,255,.03);
+}
+
+.sys-notification-card strong {
+  color: white;
+}
+
+.sys-notification-card span {
+  color: #10b981;
+}
+
+.sys-event-content {
+  flex: 1;
+}
+
+.sys-event-message {
+  color: white;
+}
+
+.sys-empty-state {
+  min-height: 80px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  color: #94a3b8;
+}
+
+.sys-service-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  color: #cbd5e1;
+}
+
+.sys-alarm-main {
+  flex: 1;
+}
+
+.sys-alarm-title {
+  font-weight: 700;
+  color: white;
+}
+
+.sys-alarm-message {
+  color: #cbd5e1;
+}
+
+.sys-alarm-meta {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+
+.sys-vision-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(2,minmax(0,1fr));
+
+  gap: 14px;
+
+  width: 100%;
+}
+
+.sys-stat {
+  min-height: 110px;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+
+@media (max-width: 1400px) {
+
+  .sys-overview,
+  .sys-infrastructure,
+  .sys-dual-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .sys-overview-kpis,
+  .sys-production-grid {
+    grid-template-columns:
+      repeat(2,1fr);
+  }
+}
+
+@media (max-width: 768px) {
+
+  .sys-overview-kpis,
+  .sys-production-grid,
+  .sys-resource-grid,
+  .sys-vision-grid,
+  .sys-alarm-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .sys-health-score {
+    min-height: 180px;
+  }
+
+  .sys-score-value {
+    font-size: 42px;
+  }
+}

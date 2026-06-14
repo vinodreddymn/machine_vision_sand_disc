@@ -29,7 +29,7 @@ function getLogIcon(level: 'error' | 'warning' | 'info' | 'success') {
   }
 }
 
-export const EventLog = React.memo(function EventLog({ logs, maxLines = 10 }: EventLogProps) {
+export const EventLog = React.memo(function EventLog({ logs, maxLines = 100 }: EventLogProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
   
   // Keep only the latest logs

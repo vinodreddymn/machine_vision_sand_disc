@@ -9,58 +9,85 @@ interface CameraViewerProps {
   showPrediction?: boolean;
 }
 
-export const CameraViewer = React.memo(function CameraViewer({
-  station,
-  cameraName,
-  partId,
-  streamUrl,
-  showPrediction = false,
-}: CameraViewerProps) {
-  return (
-    <div className="production-feed-viewer">
-      <div
-        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
-      >
-        <h2 style={{ margin: 0, fontSize: '15px', color: '#f8fafc' }}>
-          {showPrediction ? 'Calibration & Sample Test' : 'Real-time Camera Inspector'}
-        </h2>
-        <span style={{ fontSize: '12px', color: '#64748b' }}>
-          Source:{' '}
-          <span style={{ color: '#38bdf8', fontWeight: 600 }}>
-            {cameraName}
-          </span>{' '}
-          {showPrediction ? (
-            <>
-              | Prediction: {station?.system_prediction ?? 'N/A'} (Score:{' '}
-              {station?.anomaly_score ?? 'N/A'})
-            </>
-          ) : (
-            <>| Active Part: {partId ?? 'None'}</>
-          )}
-        </span>
-      </div>
+function getDecisionClass(decision: string | null | undefined): string {
+  if (!decision) return '';
+  const d = decision.toUpperCase();
+  if (d === 'PASS') return 'decision-pass';
+  if (d === 'FAIL' || d === 'REJECT') return 'decision-fail';
+  return '';
+}
 
-      <div className="production-feed-layout">
-        <div className="feed-box">
-          <span>
-            {showPrediction ? 'Target Sample Video / Camera' : 'Live Camera Stream'}
-          </span>
-          <img src={streamUrl} alt="Inspection Stream" />
+export const CameraViewer = React.memo(
+  function CameraViewer({
+    station,
+    cameraName,
+    partId,
+    streamUrl,
+    showPrediction = false,
+  }: CameraViewerProps) {
+    const decisionClass = getDecisionClass(station?.decision);
+
+    return (
+      <div className="camera-viewer">
+
+        <div className="camera-header">
+
+          <div>
+            <h2 className="camera-title">
+              {showPrediction
+                ? 'Calibration Mode'
+                : 'Inspection Camera'}
+            </h2>
+
+            <span className="camera-meta">
+              Camera: {cameraName}
+            </span>
+          </div>
+
+
+
         </div>
-        <div className="feed-box">
-          <span>
-            {showPrediction ? 'Captured Image Overlay' : 'Latest Overlay Inspection Result'}
-          </span>
-          {station?.captured_image_url ? (
+
+        <div className="camera-grid">
+
+          <div className="camera-card">
+            <div className="camera-card-title">
+              Live Feed
+            </div>
             <img
-              src={`${station.captured_image_url}?t=${Date.now()}`}
-              alt="Captured Result Overlay"
+              src={streamUrl}
+              alt="Inspection Stream"
             />
-          ) : (
-            <div className="no-img">No inspection image captured yet.</div>
-          )}
+          </div>
+
+          <div className={`camera-card ${decisionClass}`}>
+            <div className="camera-card-title">
+              Latest Inspection
+              {decisionClass === 'decision-pass' && (
+                <span className="decision-badge pass">PASS</span>
+              )}
+              {decisionClass === 'decision-fail' && (
+                <span className="decision-badge fail">
+                  {station?.decision?.toUpperCase()}
+                </span>
+              )}
+            </div>
+
+            {station?.captured_image_url ? (
+              <img
+                src={`${station.captured_image_url}?t=${Date.now()}`}
+                alt="Inspection Result"
+              />
+            ) : (
+              <div className="camera-placeholder">
+                Waiting for inspection image...
+              </div>
+            )}
+          </div>
+
         </div>
+
       </div>
-    </div>
-  );
-});
+    );
+  }
+);

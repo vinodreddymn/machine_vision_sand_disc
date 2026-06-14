@@ -5,7 +5,10 @@
   display: flex;
   flex-direction: column;
   gap: 20px;
-  max-width: 1000px;
+ 
+  min-height: 0;
+  height: 100%;
+  overflow: auto;
 }
 
 .settings-group {
@@ -85,4 +88,32 @@
   color: #38bdf8;
   border-bottom-color: #38bdf8;
   background: none;
+}
+
+/* ── Settings Tab Button ──────────────────────────────── */
+
+.settings-tab-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  color: #cbd5e1;
+  background: rgba(255, 255, 255, 0.04);
+  cursor: pointer;
+  font-weight: 600;
+  transition: var(--transition);
+}
+
+.settings-tab-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+
+.settings-tab-btn.active {
+  color: #ffffff;
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.95), rgba(59, 130, 246, 0.95));
+  border-color: rgba(37, 99, 235, 0.35);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
 }

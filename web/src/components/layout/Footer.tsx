@@ -1,76 +1,122 @@
-
 import React from 'react';
 import {
-  Activity,
+  Cpu,
   Database,
   Server,
+  Settings2,
+  MoveRight,
+  Zap,
   ShieldCheck
 } from 'lucide-react';
 
 const APP_VERSION = '2.0.1';
-const ENVIRONMENT = 'PRODUCTION';
+
+const systemData = {
+  plcStatus: 'RUN',
+  conveyorMode: 'AUTO',
+  conveyorStatus: 'RUNNING',
+  rejectActuator: 'IDLE',
+  apiStatus: true,
+  dbStatus: true
+};
 
 export const Footer = React.memo(function Footer() {
   const currentYear = new Date().getFullYear();
 
+  const getStatusType = (value: string) => {
+    switch (value) {
+      case 'RUN':
+      case 'RUNNING':
+      case 'AUTO':
+      case 'ONLINE':
+        return 'success';
+
+      case 'ACTIVE':
+      case 'MANUAL':
+        return 'warning';
+
+      case 'FAULTY':
+      case 'STOP':
+      case 'STOPPED':
+        return 'danger';
+
+      default:
+        return 'neutral';
+    }
+  };
+
   return (
-    <footer className="workspace-footer">
+    <footer className="footer">
 
-      {/* Left Section */}
-      <div className="footer-content">
-        <div className="footer-brand-section">
-          <span className="footer-brand">
+      <div className="footer-left">
+
+        <div className="footer-brand">
+          <div className="footer-brand-name">
             DiskVision Inspector
-          </span>
+          </div>
 
-          <span className="footer-copyright">
-            © {currentYear} AI Industrial Solutions. All Rights Reserved.
-          </span>
-        </div>
-      </div>
-
-      {/* Center Section */}
-      <div className="footer-status">
-
-        <div className="footer-badge online">
-          <Server size={12} />
-          <span>API Online</span>
-        </div>
-
-        <div className="footer-badge online">
-          <Database size={12} />
-          <span>Database Connected</span>
-        </div>
-
-        <div className="footer-badge online">
-          <Activity size={12} />
-          <span>Monitoring Active</span>
-        </div>
-
-        <div className="footer-environment">
-          {ENVIRONMENT}
+          <div className="footer-brand-copy">
+            © {currentYear} AI Industrial Solutions
+          </div>
         </div>
 
       </div>
 
-      {/* Right Section */}
-      <div className="footer-links">
+      <div className="footer-center">
 
-        <a href="#help" className="footer-link">
-          Help Center
-        </a>
+        <StatusItem
+          icon={<Cpu size={14} />}
+          label="PLC"
+          value={systemData.plcStatus}
+          type={getStatusType(systemData.plcStatus)}
+        />
 
-        <a href="#support" className="footer-link">
-          Support
-        </a>
+        <StatusItem
+          icon={<MoveRight size={14} />}
+          label="Conveyor"
+          value={systemData.conveyorStatus}
+          type={getStatusType(systemData.conveyorStatus)}
+        />
 
-        <a href="#documentation" className="footer-link">
-          Documentation
-        </a>
+        <StatusItem
+          icon={<Settings2 size={14} />}
+          label="Mode"
+          value={systemData.conveyorMode}
+          type={getStatusType(systemData.conveyorMode)}
+        />
+
+        <StatusItem
+          icon={<Zap size={14} />}
+          label="Reject"
+          value={systemData.rejectActuator}
+          type={getStatusType(systemData.rejectActuator)}
+        />
+
+        <StatusItem
+          icon={<Server size={14} />}
+          label="API"
+          value={systemData.apiStatus ? 'ONLINE' : 'OFFLINE'}
+          type="success"
+        />
+
+        <StatusItem
+          icon={<Database size={14} />}
+          label="DB"
+          value={systemData.dbStatus ? 'CONNECTED' : 'DISCONNECTED'}
+          type="success"
+        />
+
+      </div>
+
+      <div className="footer-right">
+
+        <div className="footer-env">
+          PRODUCTION
+        </div>
 
         <div className="footer-version">
           <ShieldCheck size={12} />
-          <span>v{APP_VERSION}</span>
+          v{APP_VERSION}
         </div>
 
       </div>
@@ -78,5 +124,33 @@ export const Footer = React.memo(function Footer() {
     </footer>
   );
 });
+
+interface StatusItemProps {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  type: string;
+}
+
+function StatusItem({
+  icon,
+  label,
+  value,
+  type
+}: StatusItemProps) {
+  return (
+    <div className={`status-item ${type}`}>
+      {icon}
+
+      <span className="status-label">
+        {label}
+      </span>
+
+      <span className="status-value">
+        {value}
+      </span>
+    </div>
+  );
+}
 
 Footer.displayName = 'Footer';

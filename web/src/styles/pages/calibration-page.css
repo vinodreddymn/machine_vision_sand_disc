@@ -6,6 +6,9 @@
   flex-direction: column;
   gap: 18px;
   max-width: 1400px;
+  min-height: 0;
+  height: 100%;
+  overflow: auto;
 }
 
 /* ── Status Banner ───────────────────────────────────── */

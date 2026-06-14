@@ -1,112 +1,123 @@
 /* =========================================================
    APPLICATION SHELL
-   ========================================================= */
-
-:root {
-  --bg-primary: #0b0f17;
-  --bg-secondary: #111827;
-  --bg-tertiary: #1a2233;
-
-  --border-color: rgba(255, 255, 255, 0.08);
-
-  --text-primary: #f8fafc;
-  --text-secondary: #94a3b8;
-
-  --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.15);
-  --shadow-md: 0 10px 30px rgba(0, 0, 0, 0.25);
-  --shadow-lg: 0 20px 45px rgba(0, 0, 0, 0.35);
-
-  --radius-sm: 10px;
-  --radius-md: 16px;
-  --radius-lg: 22px;
-
-  --header-height: 72px;
-  --content-width: 1900px;
-
-  --transition: all 0.25s ease;
-}
-
-/* =========================================================
-   ROOT APP
-   ========================================================= */
+========================================================= */
 
 .app {
-  min-height: 100vh;
   position: relative;
+  height: 100vh;
+  width: 100%;
   overflow: hidden;
+
+  color: var(--text-primary);
 
   background:
     radial-gradient(
-      circle at top right,
-      rgba(59, 130, 246, 0.12),
+      circle at 0% 0%,
+      rgba(59, 130, 246, 0.14),
       transparent 35%
     ),
     radial-gradient(
-      circle at bottom left,
-      rgba(16, 185, 129, 0.08),
+      circle at 100% 100%,
+      rgba(16, 185, 129, 0.10),
       transparent 40%
     ),
+    radial-gradient(
+      circle at 50% 20%,
+      rgba(139, 92, 246, 0.08),
+      transparent 45%
+    ),
     linear-gradient(
-      rgba(255,255,255,0.03) 1px,
+      180deg,
+      var(--bg-primary) 0%,
+      var(--bg-secondary) 100%
+    );
+}
+
+/* Decorative overlay */
+
+.app::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+
+  background:
+    linear-gradient(
+      rgba(255,255,255,0.015) 1px,
       transparent 1px
     ),
     linear-gradient(
       90deg,
-      rgba(255,255,255,0.03) 1px,
+      rgba(255,255,255,0.015) 1px,
       transparent 1px
-    ),
-    var(--bg-primary);
+    );
 
-  background-size:
-    auto,
-    auto,
-    32px 32px,
-    32px 32px;
+  background-size: 40px 40px;
 
-  color: var(--text-primary);
+  pointer-events: none;
+  opacity: 0.4;
 }
 
 /* =========================================================
-   MAIN APPLICATION CONTAINER
-   ========================================================= */
+   APP CONTAINER
+========================================================= */
 
 .app-container {
+  position: relative;
+  z-index: 1;
+
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
-  position: relative;
-}
 
-/* =========================================================
-   APPLICATION BODY
-   Sidebar + Main Content
-   ========================================================= */
-
-.app-body {
-  display: flex;
-  flex: 1;
+  height: 100%;
   min-height: 0;
   overflow: hidden;
 }
 
 /* =========================================================
-   MAIN CONTENT AREA
-   ========================================================= */
+   HEADER + CONTENT + FOOTER AREA
+========================================================= */
+
+.app-body {
+  display: flex;
+  flex: 1;
+
+  min-height: 0;
+  overflow: hidden;
+
+  height:
+    var(
+      --workspace-content-height,
+      calc(
+        100vh -
+        var(--workspace-header-height, 0px) -
+        var(--workspace-footer-height, 0px)
+      )
+    );
+}
+
+/* =========================================================
+   MAIN CONTENT
+========================================================= */
 
 .main-content {
   flex: 1;
+
   min-width: 0;
+  min-height: 0;
+  height: 100%;
 
   display: flex;
   flex-direction: column;
 
-  overflow-y: auto;
   overflow-x: hidden;
+  overflow-y: auto;
 
   scroll-behavior: smooth;
+
+  padding: 20px;
 }
 
-/* Modern Scrollbar */
+/* Smooth Scrollbar */
 
 .main-content::-webkit-scrollbar {
   width: 10px;
@@ -117,178 +128,102 @@
 }
 
 .main-content::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.25);
+  background: rgba(255,255,255,0.12);
   border-radius: 999px;
 }
 
 .main-content::-webkit-scrollbar-thumb:hover {
-  background: rgba(148, 163, 184, 0.45);
+  background: rgba(255,255,255,0.22);
+}
+
+/* Page Components */
+
+.main-content > * {
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+
+  flex: 1 1 auto;
 }
 
 /* =========================================================
-   PAGE WORKSPACE
-   ========================================================= */
+   WORKSPACE
+========================================================= */
 
 .workspace {
-  width: min(var(--content-width), 100%);
+  width: 100%;
+  max-width: var(--content-width, 1800px);
+
   margin: 0 auto;
 
   padding: 24px;
 
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 24px;
+
+  min-height: 100%;
 }
 
-/* =========================================================
-   PAGE HEADER
-   ========================================================= */
+/* Optional glass workspace */
 
-.workspace-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+.workspace-panel {
+  background: rgba(255,255,255,0.03);
 
-  min-height: var(--header-height);
+  border: 1px solid rgba(255,255,255,0.08);
 
-  padding: 18px 28px;
-
-  background: rgba(17, 24, 39, 0.72);
+  border-radius: 20px;
 
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
 
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
+  box-shadow:
+    0 10px 30px rgba(0,0,0,0.20),
+    inset 0 1px 0 rgba(255,255,255,0.04);
 
-  box-shadow: var(--shadow-md);
-}
-
-.header-meta {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  flex-wrap: wrap;
+  padding: 24px;
 }
 
 /* =========================================================
-   TOOLBAR SECTION
-   ========================================================= */
+   RESPONSIVE
+========================================================= */
 
-.toolbar {
-  display: grid;
-  grid-template-columns: 360px minmax(0, 1fr);
-  gap: 20px;
-  align-items: start;
-}
-
-/* =========================================================
-   LOWER CONTENT GRID
-   ========================================================= */
-
-.lower-grid {
-  display: grid;
-  grid-template-columns: 360px minmax(0, 1fr);
-  gap: 20px;
-  align-items: start;
-}
-
-/* =========================================================
-   CONTENT PANELS
-   ========================================================= */
-
-.panel {
-  background: rgba(17, 24, 39, 0.75);
-
-  border: 1px solid var(--border-color);
-
-  border-radius: var(--radius-md);
-
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-
-  box-shadow: var(--shadow-sm);
-
-  transition: var(--transition);
-}
-
-.panel:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
-}
-
-/* =========================================================
-   RESPONSIVE DESIGN
-   ========================================================= */
-
-@media (max-width: 1400px) {
-  .toolbar,
-  .lower-grid {
-    grid-template-columns: 320px minmax(0, 1fr);
+@media (max-width: 1600px) {
+  .workspace {
+    padding: 20px;
+    gap: 20px;
   }
 }
 
 @media (max-width: 1200px) {
-  .toolbar,
-  .lower-grid {
-    grid-template-columns: 280px minmax(0, 1fr);
-  }
-
   .workspace {
-    padding: 20px;
-  }
-}
-
-@media (max-width: 1024px) {
-  .toolbar,
-  .lower-grid,
-  .grid-production,
-  .grid-training,
-  .history-page {
-    grid-template-columns: 1fr;
+    padding: 18px;
+    gap: 18px;
   }
 
-  .workspace-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 16px;
-  }
-
-  .header-meta {
-    width: 100%;
-    justify-content: space-between;
+  .main-content {
+    padding: 16px;
   }
 }
 
 @media (max-width: 768px) {
   .workspace {
-    padding: 16px;
-    gap: 16px;
+    padding: 14px;
+    gap: 14px;
   }
 
-  .workspace-header {
-    padding: 16px 20px;
-  }
-
-  .toolbar,
-  .lower-grid {
-    gap: 16px;
+  .main-content {
+    padding: 12px;
   }
 }
 
 @media (max-width: 480px) {
   .workspace {
-    padding: 12px;
+    padding: 10px;
+    gap: 12px;
   }
 
-  .workspace-header {
-    padding: 14px 16px;
-    border-radius: var(--radius-sm);
-  }
-
-  .header-meta {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 10px;
+  .main-content {
+    padding: 8px;
   }
 }

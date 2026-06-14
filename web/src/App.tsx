@@ -1,7 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { SnapshotProvider } from './contexts/SnapshotContext';
 import { useSnapshotContext } from './contexts/SnapshotContext';
-import { Sidebar } from './components/layout/Sidebar';
 import { Header } from './components/layout/Header';
 import { Footer } from './components/layout/Footer';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
@@ -54,6 +53,8 @@ function AppInner() {
     useState<SettingsTab>('calibration');
   const [authEnabled, setAuthEnabled] = useState(false);
   const [authReady, setAuthReady] = useState(false);
+  const headerRef = useRef<HTMLDivElement>(null);
+  const footerRef = useRef<HTMLDivElement>(null);
 
   const { error } = useSnapshotContext();
 
@@ -83,6 +84,49 @@ function AppInner() {
     };
   }, []);
 
+  useLayoutEffect(() => {
+    const root = document.documentElement;
+
+    const updateWorkspaceHeight = () => {
+      const headerHeight = headerRef.current?.offsetHeight ?? 0;
+      const footerHeight = footerRef.current?.offsetHeight ?? 0;
+      const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+      const availableHeight = Math.max(
+        0,
+        Math.round(viewportHeight - headerHeight - footerHeight),
+      );
+
+      root.style.setProperty('--workspace-header-height', `${headerHeight}px`);
+      root.style.setProperty('--workspace-footer-height', `${footerHeight}px`);
+      root.style.setProperty('--workspace-content-height', `${availableHeight}px`);
+    };
+
+    const resizeObserver = new ResizeObserver(() => {
+      window.requestAnimationFrame(updateWorkspaceHeight);
+    });
+
+    if (headerRef.current) {
+      resizeObserver.observe(headerRef.current);
+    }
+
+    if (footerRef.current) {
+      resizeObserver.observe(footerRef.current);
+    }
+
+    window.addEventListener('resize', updateWorkspaceHeight);
+    window.visualViewport?.addEventListener('resize', updateWorkspaceHeight);
+    window.visualViewport?.addEventListener('scroll', updateWorkspaceHeight);
+
+    updateWorkspaceHeight();
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener('resize', updateWorkspaceHeight);
+      window.visualViewport?.removeEventListener('resize', updateWorkspaceHeight);
+      window.visualViewport?.removeEventListener('scroll', updateWorkspaceHeight);
+    };
+  }, []);
+
   const token =
     window.localStorage.getItem('diskvision_token');
 
@@ -93,17 +137,15 @@ function AppInner() {
 
   return (
     <div className="app-container">
-      <Header
-        activeTab={activeTab}
-        settingsTab={settingsTab}
-      />
-
-      <div className="app-body">
-        <Sidebar
+      <div ref={headerRef}>
+        <Header
           activeTab={activeTab}
+          settingsTab={settingsTab}
           onTabChange={setActiveTab}
         />
+      </div>
 
+      <div className="app-body">
         <main className="main-content">
 
         {error && (
@@ -171,7 +213,9 @@ function AppInner() {
         </main>
       </div>
       
-      <Footer />
+      <div ref={footerRef}>
+        <Footer />
+      </div>
 
       {showLogin && (
         <LoginModal
